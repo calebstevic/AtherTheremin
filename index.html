@@ -1,1019 +1,397 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Visual Theremin Studio</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                        mono: ['JetBrains Mono', 'monospace'],
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #0f172a; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-        .theremin-canvas { cursor: crosshair; touch-action: none; }
-        .glass-panel {
-            background: rgba(15, 23, 42, 0.88);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#020617">
+<title>Aether Theremin</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{color-scheme:dark;--bg:#020617;--pn:#0f172a;--ln:#1e293b;--tx:#e2e8f0;--mu:#94a3b8;--cy:#22d3ee;--am:#fbbf24;
+padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--tx);font:14px/1.3 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;display:flex;flex-direction:column;overflow:hidden;overscroll-behavior:none;user-select:none;-webkit-user-select:none;padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+button,select{font:inherit;color:inherit}
+button{background:var(--pn);border:1px solid var(--ln);border-radius:10px;min-height:40px;padding:0 12px;cursor:pointer;touch-action:manipulation}
+button:active{transform:scale(.96)}
+select{background:var(--bg);border:1px solid var(--ln);border-radius:10px;min-height:40px;padding:0 8px;max-width:100%}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-bottom:1px solid var(--ln);background:var(--pn);flex:none}
+header h1{font-size:15px;margin:0;font-weight:700;background:linear-gradient(90deg,#22d3ee,#a5b4fc);-webkit-background-clip:text;background-clip:text;color:transparent;white-space:nowrap}
+.hb{display:flex;gap:6px}
+.on{background:var(--cy)!important;color:#082f49!important;border-color:var(--cy)!important;font-weight:600}
+.am.on{background:var(--am)!important;border-color:var(--am)!important}
+#audio.live{background:#e11d48;border-color:#e11d48;color:#fff}
+#audio:not(.live){background:#10b981;border-color:#10b981;color:#022c22;font-weight:600}
+#work{flex:1;min-height:0;display:flex}
+main{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;padding:6px}
+#pad{position:relative;flex:1;min-height:0;border-radius:14px;overflow:hidden;border:1px solid var(--ln);background:var(--bg)}
+#pad.fs{position:fixed;inset:0;z-index:100;border-radius:0;border:0;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair;display:block}
+.hud{position:absolute;top:8px;left:8px;display:flex;gap:8px;align-items:center;pointer-events:none;background:rgba(2,6,23,.78);border:1px solid rgba(34,211,238,.3);border-radius:12px;padding:4px 10px;font:12px ui-monospace,Menlo,monospace}
+#rn{font-size:20px;font-weight:700;color:#67e8f9;min-width:42px}
+.hud small{display:block;color:var(--mu);font-size:10px}
+#fsb{position:absolute;top:8px;right:8px;width:42px;padding:0;background:rgba(2,6,23,.78);z-index:3;font-size:18px}
+#hint{position:absolute;left:0;right:0;top:44%;text-align:center;pointer-events:none;color:#cbd5e1;font-size:13px;transition:opacity .5s;text-shadow:0 1px 6px #000;background:rgba(2,6,23,.6);width:max-content;max-width:90%;margin:0 auto;padding:8px 14px;border-radius:12px}
+#bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;flex:none}
+.grp{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--mu)}
+.seg{display:flex;flex:1;min-width:190px}
+.seg button{flex:1;border-radius:0;padding:0 6px}
+.seg button:first-child{border-radius:10px 0 0 10px}.seg button:last-child{border-radius:0 10px 10px 0}
+.hz{font:10px ui-monospace,monospace;color:var(--mu);min-width:44px}
+#backdrop{position:fixed;inset:0;background:rgba(2,6,23,.75);z-index:40;display:none}
+aside{position:fixed;left:0;right:0;bottom:0;max-height:86dvh;z-index:50;background:var(--pn);border-top:1px solid var(--ln);border-radius:18px 18px 0 0;padding:12px 14px calc(14px + env(safe-area-inset-bottom,0px));overflow-y:auto;transform:translateY(100%);transition:transform .25s;display:flex;flex-direction:column;gap:12px;overscroll-behavior:contain}
+aside.open{transform:none}
+aside h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--mu);margin:0 0 6px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;margin-bottom:2px}
+.row b{font:600 12px ui-monospace,monospace;color:var(--cy)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#nm{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
+#nm button{min-height:38px;padding:0;font:700 12px ui-monospace,monospace;color:var(--mu)}
+#nm button.a{background:var(--cy);color:#082f49;border-color:var(--cy)}
+#nm button.r{background:var(--am);border-color:var(--am);color:#422006}
+input[type=range]{width:100%;height:32px;accent-color:var(--cy)}
+label.ck{display:flex;align-items:center;gap:8px;min-height:34px;font-size:13px}
+.waves{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.sx{display:flex;justify-content:flex-end}
+@media(min-width:1024px){
+ #gear,#backdrop{display:none!important}
+ aside{position:static;transform:none;width:320px;max-height:none;border-radius:0;border-top:0;border-left:1px solid var(--ln);flex:none}
+ header h1{font-size:17px}
+}
+@media(max-height:480px){header{padding:3px 8px}button,select{min-height:34px}#bar{display:none}.hud{top:4px;left:4px}}
+</style>
 </head>
-<body class="h-full font-sans antialiased flex flex-col overflow-x-hidden selection:bg-cyan-500 selection:text-slate-950">
-
-    <!-- Top Navigation Header -->
-    <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur px-4 py-3 flex items-center justify-between gap-3 z-30 shrink-0">
-        <div class="flex items-center space-x-3">
-            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-500 flex items-center justify-center text-slate-950 font-bold text-lg shadow-lg shadow-cyan-500/20">
-                <i class="fa-solid fa-wave-square"></i>
-            </div>
-            <div>
-                <h1 class="text-base sm:text-lg font-bold tracking-tight bg-gradient-to-r from-cyan-400 via-sky-200 to-indigo-300 bg-clip-text text-transparent">
-                    AetherTheremin <span class="hidden sm:inline text-xs px-2 py-0.5 rounded-full bg-cyan-950 border border-cyan-800 text-cyan-400 font-mono">Visual Lab</span>
-                </h1>
-                <p class="text-[11px] text-slate-400 hidden sm:block">Continuous Pitch Controller & Visualizers</p>
-            </div>
-        </div>
-
-        <!-- Controls -->
-        <div class="flex items-center gap-2">
-            <button id="btn-audio-toggle" class="px-3.5 sm:px-5 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 transition-all shadow-lg shadow-emerald-500/20 active:scale-95">
-                <i class="fa-solid fa-power-off text-sm"></i>
-                <span>Activate Audio</span>
-            </button>
-            <button id="btn-vibrato-bypass" class="hidden sm:flex px-3.5 py-2 rounded-xl font-semibold text-xs sm:text-sm items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all active:scale-95">
-                <i class="fa-solid fa-bolt text-amber-400"></i>
-                <span id="vibrato-bypass-label">Vibrato: OFF</span>
-                <span class="text-[10px] font-mono text-slate-400 border border-slate-600 px-1.5 py-0.5 rounded">SPACE</span>
-            </button>
-            <button id="btn-toggle-drawer" class="lg:hidden px-3.5 py-2 rounded-xl font-semibold text-xs flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 transition-all active:scale-95">
-                <i class="fa-solid fa-sliders text-sm"></i>
-                <span>Settings</span>
-            </button>
-            <button id="btn-help" class="w-9 h-9 rounded-xl glass-panel hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-cyan-400 transition-colors">
-                <i class="fa-solid fa-circle-info text-base"></i>
-            </button>
-        </div>
-    </header>
-
-    <!-- Main Workspace -->
-    <div class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
-        
-        <!-- Left: Interactive Canvas & Overlay Visualizers -->
-        <main class="flex-1 flex flex-col p-3 sm:p-4 gap-3 overflow-y-auto relative min-h-[400px]">
-            
-            <!-- Theremin Touchpad Canvas Container -->
-            <div class="flex-1 relative rounded-2xl overflow-hidden glass-panel flex flex-col shadow-2xl border border-slate-800 min-h-[260px]">
-                
-                <!-- Canvas Bar Info Header -->
-                <div class="absolute top-2.5 left-3 right-3 flex items-center justify-between pointer-events-none z-10 gap-2">
-                    <div class="flex items-center gap-1.5 bg-slate-950/80 backdrop-blur px-2.5 py-1 rounded-lg border border-slate-800 text-[11px] font-mono text-slate-300">
-                        <span class="text-cyan-400">Pitch:</span>
-                        <span id="display-freq">0.0 Hz</span>
-                        <span class="text-slate-600">|</span>
-                        <span class="text-indigo-400">Vol:</span>
-                        <span id="display-vol">0%</span>
-                    </div>
-
-                    <!-- Note Readout Box -->
-                    <div id="readout-card" class="bg-slate-950/90 backdrop-blur px-3 py-1 rounded-xl border border-cyan-500/30 flex items-center gap-2 shadow-lg">
-                        <div class="text-right">
-                            <div id="readout-note" class="text-lg sm:text-xl font-bold font-mono text-cyan-300 leading-none">--</div>
-                            <div id="readout-octave" class="text-[9px] text-slate-400 uppercase tracking-wider font-semibold">Note</div>
-                        </div>
-                        <div class="w-px h-6 bg-slate-800"></div>
-                        <div>
-                            <div id="readout-cents" class="text-xs sm:text-sm font-mono font-bold text-amber-400 leading-none">0 cents</div>
-                            <div class="text-[9px] text-slate-400 uppercase tracking-wider font-semibold">Dev</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Touchpad Canvas -->
-                <canvas id="theremin-canvas" class="theremin-canvas flex-1 w-full h-full bg-slate-950/90"></canvas>
-
-                <!-- Touch instructions overlay -->
-                <div id="canvas-overlay-hint" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none transition-opacity duration-500">
-                    <div class="w-12 h-12 rounded-full bg-cyan-500/10 border border-cyan-400/40 flex items-center justify-center text-cyan-400 text-xl animate-pulse mb-2">
-                        <i class="fa-solid fa-hand-pointer"></i>
-                    </div>
-                    <p class="text-xs sm:text-sm font-medium text-slate-300 text-center px-4">Touch & Drag to Play Theremin</p>
-                    <p class="text-[10px] text-slate-500 mt-0.5">Horizontal = Pitch | Vertical = Volume</p>
-                </div>
-            </div>
-
-            <!-- Visualizer Layout Selection Tabs -->
-            <div class="flex items-center justify-between gap-2 bg-slate-900/60 p-1.5 rounded-xl border border-slate-800 shrink-0 overflow-x-auto">
-                <div class="flex items-center gap-1 w-full sm:w-auto">
-                    <button class="vis-tab-btn active flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 bg-cyan-500 text-slate-950 font-semibold shadow" data-target="vis-strip">
-                        <i class="fa-solid fa-grip-lines-vertical"></i> Chromatic Strip
-                    </button>
-                    <button class="vis-tab-btn flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800" data-target="vis-ring">
-                        <i class="fa-solid fa-circle-notch"></i> Radial Wheel
-                    </button>
-                </div>
-
-                <!-- Cents Deviation Bar Indicator -->
-                <div class="hidden md:flex items-center gap-2 px-3 py-1 bg-slate-950 rounded-lg border border-slate-800 text-xs font-mono">
-                    <span class="text-slate-500">Flat</span>
-                    <div class="w-24 h-2 bg-slate-800 rounded-full relative overflow-hidden">
-                        <div class="absolute inset-y-0 left-1/2 w-0.5 bg-slate-600"></div>
-                        <div id="cent-bar-fill" class="absolute inset-y-0 left-1/2 w-0 bg-cyan-400 transition-all duration-75"></div>
-                    </div>
-                    <span class="text-slate-500">Sharp</span>
-                </div>
-            </div>
-
-            <!-- Visualizer Container Panels -->
-            <div class="h-32 sm:h-40 glass-panel rounded-2xl p-2.5 relative overflow-hidden shrink-0 border border-slate-800">
-                
-                <!-- 1. CHROMATIC STRIP PANEL -->
-                <div id="vis-strip" class="vis-panel w-full h-full flex flex-col justify-between">
-                    <div class="flex justify-between items-center text-[10px] sm:text-xs text-slate-400 px-1 font-mono">
-                        <span id="strip-range-low">C4 (262Hz)</span>
-                        <span class="text-cyan-400 font-semibold hidden sm:inline">Linear Scale Pitch Bar</span>
-                        <span id="strip-range-high">C7 (2093Hz)</span>
-                    </div>
-                    <!-- Keyboard Keys / Piano Overlay Visualization -->
-                    <div class="relative flex-1 my-1.5 bg-slate-950 rounded-xl overflow-hidden border border-slate-800 flex" id="chromatic-keys-container"></div>
-                    <!-- Pointer Indicator Track with Vibrato Ribbon Overlay -->
-                    <div class="relative h-4 sm:h-5 bg-slate-900 rounded-md overflow-hidden">
-                        <div id="vibrato-ribbon" class="absolute top-0 bottom-0 bg-amber-400/30 border-l border-r border-amber-400/80 -translate-x-1/2 transition-all duration-75"></div>
-                        <div id="strip-cursor" class="absolute top-0 bottom-0 w-2 bg-cyan-400 rounded-full shadow-[0_0_12px_#06b6d4] -translate-x-1/2 transition-all duration-75"></div>
-                    </div>
-                </div>
-
-                <!-- 2. RADIAL RING PANEL -->
-                <div id="vis-ring" class="vis-panel w-full h-full hidden flex items-center justify-center gap-4 sm:gap-6">
-                    <div class="relative w-28 h-28 sm:w-32 sm:h-32 flex items-center justify-center shrink-0">
-                        <canvas id="radial-canvas" width="130" height="130" class="w-full h-full"></canvas>
-                        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                            <span id="ring-note-name" class="text-xl sm:text-2xl font-bold font-mono text-cyan-400 leading-none">--</span>
-                            <span id="ring-octave" class="text-[9px] sm:text-[10px] text-slate-400 font-mono mt-0.5">Octave -</span>
-                        </div>
-                    </div>
-                    <div class="flex flex-col justify-center space-y-1 text-xs text-slate-300 font-mono">
-                        <div class="flex items-center gap-2">
-                            <div class="w-2.5 h-2.5 rounded-full bg-cyan-400 shrink-0"></div>
-                            <span>Angle = Pitch Class (0-360°)</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <div class="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0"></div>
-                            <span>Segments = Active Scale Notes</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-
-        <!-- Right Sidebar / Mobile Slide-Over Drawer Controls -->
-        <div id="settings-backdrop" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 hidden lg:hidden"></div>
-        <aside id="settings-drawer" class="fixed inset-y-0 right-0 z-50 w-85 sm:w-96 lg:static lg:w-80 glass-panel border-l border-slate-800 p-4 flex flex-col gap-4 overflow-y-auto shrink-0 transform translate-x-full lg:translate-x-0 transition-transform duration-300">
-            
-            <div class="flex items-center justify-between lg:hidden border-b border-slate-800 pb-3">
-                <h2 class="font-bold text-sm text-slate-200 flex items-center gap-2">
-                    <i class="fa-solid fa-sliders text-cyan-400"></i> Theremin Settings
-                </h2>
-                <button id="btn-close-drawer" class="text-slate-400 hover:text-slate-100 p-1">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
-            </div>
-
-            <!-- Key & Custom Scale Management Section -->
-            <div>
-                <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5 flex items-center gap-2">
-                    <i class="fa-solid fa-key text-emerald-400"></i> Key & Scale Manager
-                </h2>
-
-                <div class="grid grid-cols-2 gap-2 mb-2.5">
-                    <div>
-                        <label class="text-[10px] font-semibold text-slate-400 block mb-1">Root Key</label>
-                        <select id="select-root-key" class="w-full bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-cyan-300 px-2.5 py-1.5 outline-none focus:border-cyan-500">
-                            <option value="0">C</option>
-                            <option value="1">C# / Db</option>
-                            <option value="2">D</option>
-                            <option value="3">D# / Eb</option>
-                            <option value="4">E</option>
-                            <option value="5">F</option>
-                            <option value="6">F# / Gb</option>
-                            <option value="7">G</option>
-                            <option value="8">G# / Ab</option>
-                            <option value="9" selected>A</option>
-                            <option value="10">A# / Bb</option>
-                            <option value="11">B</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-semibold text-slate-400 block mb-1">Scale Preset</label>
-                        <select id="select-scale-preset" class="w-full bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 px-2.5 py-1.5 outline-none focus:border-cyan-500">
-                            <option value="chromatic">Chromatic (All)</option>
-                            <option value="major">Major (Ionian)</option>
-                            <option value="natural_minor" selected>Natural Minor</option>
-                            <option value="harmonic_minor">Harmonic Minor</option>
-                            <option value="pentatonic_minor">Pentatonic Minor</option>
-                            <option value="blues">Blues Scale</option>
-                            <option value="dorian">Dorian Mode</option>
-                            <option value="custom">Custom Scale</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800 space-y-1.5">
-                    <div class="flex justify-between items-center">
-                        <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Active Notes Matrix</span>
-                        <div class="flex gap-1">
-                            <button id="btn-scale-all" class="px-2 py-0.5 text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-mono">All</button>
-                            <button id="btn-scale-clear" class="px-2 py-0.5 text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-mono">Clear</button>
-                        </div>
-                    </div>
-                    <div id="note-matrix" class="grid grid-cols-6 gap-1"></div>
-                </div>
-            </div>
-
-            <hr class="border-slate-800">
-
-            <div>
-                <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5 flex items-center gap-2">
-                    <i class="fa-solid fa-wand-magic-sparkles text-cyan-400"></i> Pitch Tuning & Snap Modes
-                </h2>
-
-                <div class="space-y-2">
-                    <div class="flex justify-between items-center">
-                        <label class="text-xs font-semibold text-slate-300">Quantization Mode</label>
-                        <span id="snap-status" class="text-[10px] px-2 py-0.5 rounded font-mono bg-slate-800 text-slate-400">Continuous</span>
-                    </div>
-                    <div class="grid grid-cols-3 gap-1 p-1 bg-slate-950 rounded-xl border border-slate-800 text-[11px]">
-                        <button id="btn-mode-free" class="py-1.5 rounded-lg font-medium transition-all bg-cyan-500 text-slate-950 font-semibold shadow text-center">Free</button>
-                        <button id="btn-mode-scale" class="py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition-all text-center">Scale</button>
-                        <button id="btn-mode-magnet" class="py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition-all text-center">Magnetic</button>
-                    </div>
-                </div>
-
-                <!-- Magnetic Pull Strength Slider -->
-                <div id="magnet-strength-container" class="mt-3 space-y-1 opacity-40 pointer-events-none transition-opacity">
-                    <div class="flex justify-between text-xs font-semibold text-slate-300">
-                        <span>Magnetic Pull Strength</span>
-                        <span id="magnet-value" class="font-mono text-cyan-400">50%</span>
-                    </div>
-                    <input id="slider-magnet" type="range" min="10" max="100" value="50" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
-                </div>
-
-                <!-- Auto-Snap Delay Slider -->
-                <div id="snap-delay-container" class="mt-3 space-y-1 opacity-40 pointer-events-none transition-opacity">
-                    <div class="flex justify-between text-xs font-semibold text-slate-300">
-                        <span>Auto-Snap Delay</span>
-                        <span id="snap-delay-value" class="font-mono text-cyan-400">300 ms</span>
-                    </div>
-                    <input id="slider-snap-delay" type="range" min="0" max="1500" step="50" value="300" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
-                </div>
-
-                <!-- Portamento / Glide Speed -->
-                <div class="mt-3 space-y-1">
-                    <div class="flex justify-between text-xs font-semibold text-slate-300">
-                        <span>Glide Speed (Portamento)</span>
-                        <span id="glide-value" class="font-mono text-cyan-400">30 ms</span>
-                    </div>
-                    <input id="slider-glide" type="range" min="0" max="250" value="30" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
-                </div>
-
-                <!-- Frequency Range Selector -->
-                <div class="mt-3 space-y-1">
-                    <div class="flex justify-between text-xs font-semibold text-slate-300">
-                        <span>Octave Range</span>
-                        <span id="range-value" class="font-mono text-cyan-400">C4 - C7</span>
-                    </div>
-                    <select id="select-range" class="w-full bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-300 px-2.5 py-1.5 outline-none focus:border-cyan-500">
-                        <option value="C2-C6">C2 - C6 (~65 - 1046 Hz)</option>
-                        <option value="C3-C5">C3 - C5 (~130 - 523 Hz)</option>
-                        <option value="C4-C7" selected>C4 - C7 (~261 - 2093 Hz)</option>
-                    </select>
-                </div>
-            </div>
-
-            <hr class="border-slate-800">
-
-            <!-- Audio & Timbre Settings -->
-            <div>
-                <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5 flex items-center gap-2">
-                    <i class="fa-solid fa-compact-disc text-indigo-400"></i> Timbre & Synthesis
-                </h2>
-
-                <div class="space-y-1.5">
-                    <label class="text-xs font-semibold text-slate-300">Waveform</label>
-                    <div class="grid grid-cols-4 gap-1.5">
-                        <button class="wave-btn active p-2 rounded-xl border border-slate-800 bg-slate-950 text-cyan-400 flex flex-col items-center gap-1 text-xs" data-wave="sine">
-                            <i class="fa-solid fa-wave-square"></i> Sine
-                        </button>
-                        <button class="wave-btn p-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 flex flex-col items-center gap-1 text-xs" data-wave="triangle">
-                            <i class="fa-solid fa-play -rotate-90"></i> Tri
-                        </button>
-                        <button class="wave-btn p-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 flex flex-col items-center gap-1 text-xs" data-wave="sawtooth">
-                            <i class="fa-solid fa-chart-line"></i> Saw
-                        </button>
-                        <button class="wave-btn p-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 flex flex-col items-center gap-1 text-xs" data-wave="square">
-                            <i class="fa-solid fa-square-full"></i> Sq
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Vibrato Effect Controls -->
-                <div class="mt-3 space-y-2.5 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs font-semibold text-amber-400 flex items-center gap-1.5">
-                            <i class="fa-solid fa-circle-nodes"></i> Dynamic Vibrato LFO
-                        </span>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="toggle-vibrato" class="sr-only peer">
-                            <div class="w-8 h-4 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-amber-400"></div>
-                        </label>
-                    </div>
-
-                    <div id="vibrato-controls" class="opacity-40 pointer-events-none transition-opacity space-y-2.5">
-                        <div class="space-y-1">
-                            <div class="flex justify-between text-xs text-slate-300">
-                                <span>Rate</span>
-                                <span id="vib-rate-val" class="font-mono text-amber-400">5.0 Hz</span>
-                            </div>
-                            <input id="slider-vib-rate" type="range" min="0.5" max="15" step="0.1" value="5" class="w-full h-1 bg-slate-800 rounded-lg appearance-none accent-amber-400">
-                        </div>
-                        <div class="space-y-1">
-                            <div class="flex justify-between text-xs text-slate-300">
-                                <span>Depth</span>
-                                <span id="vib-depth-val" class="font-mono text-amber-400">25 Cents</span>
-                            </div>
-                            <input id="slider-vib-depth" type="range" min="0" max="100" step="1" value="25" class="w-full h-1 bg-slate-800 rounded-lg appearance-none accent-amber-400">
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <hr class="border-slate-800">
-
-            <!-- Visual Options -->
-            <div>
-                <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5 flex items-center gap-2">
-                    <i class="fa-solid fa-eye text-amber-400"></i> Display Options
-                </h2>
-                <div class="space-y-2 text-xs text-slate-300">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" id="toggle-trails" checked class="rounded bg-slate-900 border-slate-800 text-cyan-500">
-                        <span>Cursor Motion Glow Trails</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" id="toggle-piano-overlay" checked class="rounded bg-slate-900 border-slate-800 text-cyan-500">
-                        <span>Show Piano Keys on Touchpad</span>
-                    </label>
-                </div>
-            </div>
-        </aside>
-    </div>
-
-    <!-- Info Modal -->
-    <div id="help-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="glass-panel max-w-md w-full rounded-2xl p-6 border border-slate-800 space-y-4 shadow-2xl">
-            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-                <h3 class="font-bold text-lg text-slate-100 flex items-center gap-2">
-                    <i class="fa-solid fa-circle-question text-cyan-400"></i> How to Play
-                </h3>
-                <button id="btn-close-modal" class="text-slate-400 hover:text-slate-100 p-1">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
-            </div>
-            <div class="space-y-3 text-sm text-slate-300 leading-relaxed">
-                <p><strong class="text-cyan-400">Pitch (X-Axis):</strong> Drag left or right across the canvas to glide through frequencies.</p>
-                <p><strong class="text-indigo-400">Volume (Y-Axis):</strong> Drag up for louder volume, down for quieter.</p>
-                <p><strong class="text-amber-400">Scale Snapping:</strong> Enable Scale or Magnetic mode in the settings to automatically lock or pull notes into your chosen musical key after a short delay.</p>
-            </div>
-            <button id="btn-modal-ok" class="w-full py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold transition-all">
-                Got It!
-            </button>
-        </div>
-    </div>
-
-    <!-- APPLICATION SCRIPT LOGIC -->
-    <script>
-        const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-
-        const SCALE_PRESETS = {
-            chromatic: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-            major: [0, 2, 4, 5, 7, 9, 11],
-            natural_minor: [0, 2, 3, 5, 7, 8, 10],
-            harmonic_minor: [0, 2, 3, 5, 7, 8, 11],
-            pentatonic_minor: [0, 3, 5, 7, 10],
-            blues: [0, 3, 5, 6, 7, 10],
-            dorian: [0, 2, 3, 5, 7, 9, 10]
-        };
-
-        function freqToMidi(freq) { return 69 + 12 * Math.log2(freq / 440); }
-        function midiToFreq(midi) { return 440 * Math.pow(2, (midi - 69) / 12); }
-
-        function getPitchDetails(freq) {
-            const midi = freqToMidi(freq);
-            const nearestMidi = Math.round(midi);
-            const cents = Math.round((midi - nearestMidi) * 100);
-            const noteIndex = (nearestMidi % 12 + 12) % 12;
-            const octave = Math.floor(nearestMidi / 12) - 1;
-            return { midi, nearestMidi, noteName: NOTE_NAMES[noteIndex], octave, cents, noteIndex };
-        }
-
-        const state = {
-            audioCtx: null,
-            osc: null,
-            gainNode: null,
-            vibratoOsc: null,
-            vibratoGain: null,
-            isPlaying: false,
-            audioStarted: false,
-            
-            minFreq: 261.63,
-            maxFreq: 2093.00,
-            currentFreq: 523.25,
-            targetFreq: 523.25,
-            currentVol: 0.5,
-            targetVol: 0.5,
-            glideTimeMs: 30,
-            
-            rootKey: 9, // A
-            scalePreset: 'natural_minor',
-            activeNotes: [true, false, true, true, false, true, false, true, true, false, true, false], // A Minor
-            quantizeMode: 'free',
-            magnetStrength: 0.5,
-            snapDelayMs: 300,
-            lastCursorMoveTime: 0,
-            lastRawX: 0,
-            motionThresholdPx: 2,
-
-            waveform: 'sine',
-            vibratoEnabled: false,
-            vibratoRate: 5.0,
-            vibratoDepthCents: 25,
-            vibratoShape: 'sine',
-            lfoPhase: 0,
-            
-            showTrails: true,
-            showPianoOverlay: true,
-            activeTab: 'vis-strip',
-            isInteracting: false,
-            cursorX: 0.5,
-            cursorY: 0.5,
-            trailPoints: []
-        };
-
-        function findNearestScaleMidi(rawMidi) {
-            let bestMidi = Math.round(rawMidi);
-            let minDiff = Infinity;
-            for (let offset = -12; offset <= 12; offset++) {
-                const candidate = Math.round(rawMidi) + offset;
-                const noteIdx = (candidate % 12 + 12) % 12;
-                if (state.activeNotes[noteIdx]) {
-                    const diff = Math.abs(rawMidi - candidate);
-                    if (diff < minDiff) { minDiff = diff; bestMidi = candidate; }
-                }
-            }
-            return bestMidi;
-        }
-
-        function isSnapEngaged() {
-            if (state.snapDelayMs <= 0) return true;
-            return (Date.now() - state.lastCursorMoveTime) >= state.snapDelayMs;
-        }
-
-        function calculateTargetFrequency(freq) {
-            if (state.quantizeMode === 'free' || !isSnapEngaged()) return freq;
-            const rawMidi = freqToMidi(freq);
-            const scaleMidi = findNearestScaleMidi(rawMidi);
-            if (state.quantizeMode === 'scale') return midiToFreq(scaleMidi);
-            return midiToFreq(rawMidi + (scaleMidi - rawMidi) * state.magnetStrength);
-        }
-
-        const canvas = document.getElementById('theremin-canvas');
-        const ctx = canvas.getContext('2d');
-        const overlayHint = document.getElementById('canvas-overlay-hint');
-        const btnAudioToggle = document.getElementById('btn-audio-toggle');
-        const btnVibratoBypass = document.getElementById('btn-vibrato-bypass');
-        const vibratoBypassLabel = document.getElementById('vibrato-bypass-label');
-        
-        const displayFreq = document.getElementById('display-freq');
-        const displayVol = document.getElementById('display-vol');
-        const readoutNote = document.getElementById('readout-note');
-        const readoutOctave = document.getElementById('readout-octave');
-        const readoutCents = document.getElementById('readout-cents');
-        const centBarFill = document.getElementById('cent-bar-fill');
-        
-        const stripCursor = document.getElementById('strip-cursor');
-        const vibratoRibbon = document.getElementById('vibrato-ribbon');
-        const chromaticKeysContainer = document.getElementById('chromatic-keys-container');
-        
-        const radialCanvas = document.getElementById('radial-canvas');
-        const radialCtx = radialCanvas.getContext('2d');
-        const ringNoteName = document.getElementById('ring-note-name');
-        const ringOctave = document.getElementById('ring-octave');
-
-        function renderNoteMatrixUI() {
-            const container = document.getElementById('note-matrix');
-            if (!container) return;
-            container.innerHTML = '';
-            for (let i = 0; i < 12; i++) {
-                const isRoot = i === state.rootKey;
-                const isActive = state.activeNotes[i];
-                const btn = document.createElement('button');
-                btn.className = `py-1 rounded text-[11px] font-mono font-bold transition-all border ${
-                    isActive ? (isRoot ? 'bg-amber-400 text-slate-950 border-amber-300' : 'bg-cyan-500 text-slate-950 border-cyan-400') : 'bg-slate-900 text-slate-500 border-slate-800'
-                }`;
-                btn.textContent = NOTE_NAMES[i];
-                btn.addEventListener('click', () => {
-                    state.activeNotes[i] = !state.activeNotes[i];
-                    state.scalePreset = 'custom';
-                    document.getElementById('select-scale-preset').value = 'custom';
-                    renderNoteMatrixUI();
-                    buildChromaticStripKeys();
-                });
-                container.appendChild(btn);
-            }
-        }
-
-        function updateScaleFromPreset() {
-            if (state.scalePreset === 'custom') return;
-            const formula = SCALE_PRESETS[state.scalePreset] || SCALE_PRESETS.chromatic;
-            state.activeNotes = new Array(12).fill(false);
-            formula.forEach(offset => {
-                const noteIdx = (state.rootKey + offset) % 12;
-                state.activeNotes[noteIdx] = true;
-            });
-            renderNoteMatrixUI();
-            buildChromaticStripKeys();
-        }
-
-        function initAudio() {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (!state.audioCtx) {
-                state.audioCtx = new AudioContext();
-                state.osc = state.audioCtx.createOscillator();
-                state.osc.type = state.waveform;
-                state.osc.frequency.setValueAtTime(state.currentFreq, state.audioCtx.currentTime);
-
-                state.gainNode = state.audioCtx.createGain();
-                state.gainNode.gain.setValueAtTime(0, state.audioCtx.currentTime);
-
-                state.vibratoOsc = state.audioCtx.createOscillator();
-                state.vibratoOsc.type = state.vibratoShape;
-                state.vibratoOsc.frequency.setValueAtTime(state.vibratoRate, state.audioCtx.currentTime);
-                
-                state.vibratoGain = state.audioCtx.createGain();
-                state.vibratoGain.gain.setValueAtTime(0, state.audioCtx.currentTime);
-
-                state.vibratoOsc.connect(state.vibratoGain);
-                state.vibratoGain.connect(state.osc.frequency);
-                state.osc.connect(state.gainNode);
-                state.gainNode.connect(state.audioCtx.destination);
-
-                state.osc.start();
-                state.vibratoOsc.start();
-                state.audioStarted = true;
-            }
-            if (state.audioCtx.state === 'suspended') {
-                state.audioCtx.resume();
-            }
-        }
-
-        function setAudioState(active) {
-            initAudio();
-            state.isPlaying = active;
-            btnAudioToggle.className = active 
-                ? "px-3.5 sm:px-5 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 bg-rose-500 hover:bg-rose-400 text-slate-950 transition-all shadow-lg shadow-rose-500/20 active:scale-95"
-                : "px-3.5 sm:px-5 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 transition-all shadow-lg shadow-emerald-500/20 active:scale-95";
-            btnAudioToggle.innerHTML = active ? `<i class="fa-solid fa-volume-xmark text-sm"></i><span>Mute Audio</span>` : `<i class="fa-solid fa-volume-high text-sm"></i><span>Unmute Audio</span>`;
-        }
-
-        function updateAudioNodes() {
-            if (!state.audioStarted || !state.audioCtx) return;
-            const now = state.audioCtx.currentTime;
-            const glideSec = state.glideTimeMs / 1000;
-            const freq = calculateTargetFrequency(state.targetFreq);
-
-            state.osc.frequency.setTargetAtTime(freq, now, Math.max(0.005, glideSec));
-            const targetGain = (state.isInteracting && state.isPlaying) ? state.targetVol : 0;
-            state.gainNode.gain.setTargetAtTime(targetGain, now, 0.015);
-
-            state.vibratoOsc.type = state.vibratoShape;
-            state.vibratoOsc.frequency.setTargetAtTime(state.vibratoRate, now, 0.05);
-            const depthRatio = Math.pow(2, state.vibratoDepthCents / 1200) - 1;
-            state.vibratoGain.gain.setTargetAtTime(state.vibratoEnabled ? freq * depthRatio : 0, now, 0.05);
-
-            state.currentFreq += (freq - state.currentFreq) * 0.2;
-            state.currentVol += (targetGain - state.currentVol) * 0.2;
-        }
-
-        function buildChromaticStripKeys() {
-            chromaticKeysContainer.innerHTML = '';
-            const minMidi = Math.round(freqToMidi(state.minFreq));
-            const maxMidi = Math.round(freqToMidi(state.maxFreq));
-
-            for (let m = minMidi; m <= maxMidi; m++) {
-                const noteIdx = (m % 12 + 12) % 12;
-                const isRoot = noteIdx === state.rootKey;
-                const inScale = state.activeNotes[noteIdx];
-                const keyEl = document.createElement('div');
-                
-                let bgStyle = 'bg-slate-800/20 text-slate-600 opacity-40';
-                if (inScale) {
-                    bgStyle = isRoot ? 'bg-amber-500/20 border-t-2 border-amber-400 text-amber-300 font-bold opacity-100' : 'bg-slate-800/70 text-cyan-200 border-t border-cyan-400/40 opacity-100';
-                }
-                keyEl.className = `flex-1 border-r border-slate-900/60 flex flex-col justify-end items-center pb-1 text-[8px] font-mono select-none ${bgStyle}`;
-                chromaticKeysContainer.appendChild(keyEl);
-            }
-        }
-
-        function resizeCanvases() {
-            const rect = canvas.parentElement.getBoundingClientRect();
-            canvas.width = rect.width;
-            canvas.height = rect.height;
-        }
-        window.addEventListener('resize', resizeCanvases);
-
-        function handlePointerMove(clientX, clientY) {
-            const rect = canvas.getBoundingClientRect();
-            const rawX = clientX - rect.left;
-
-            if (Math.abs(rawX - state.lastRawX) > state.motionThresholdPx) {
-                state.lastCursorMoveTime = Date.now();
-                state.lastRawX = rawX;
-            }
-
-            const x = Math.max(0, Math.min(1, rawX / rect.width));
-            const y = Math.max(0, Math.min(1, 1 - (clientY - rect.top) / rect.height));
-
-            state.cursorX = x;
-            state.cursorY = y;
-            state.isInteracting = true;
-
-            const minLog = Math.log2(state.minFreq);
-            const maxLog = Math.log2(state.maxFreq);
-            state.targetFreq = Math.pow(2, minLog + x * (maxLog - minLog));
-            state.targetVol = Math.pow(y, 1.5);
-
-            if (overlayHint) overlayHint.style.opacity = '0';
-            if (state.showTrails) {
-                state.trailPoints.push({ x: rawX, y: clientY - rect.top, alpha: 1.0, radius: 12 + y * 18 });
-            }
-        }
-
-        function handlePointerLeave() { state.isInteracting = false; }
-
-        canvas.addEventListener('pointerdown', (e) => {
-            canvas.setPointerCapture(e.pointerId);
-            initAudio();
-            if (!state.audioStarted || !state.isPlaying) setAudioState(true);
-            state.lastRawX = e.clientX - canvas.getBoundingClientRect().left;
-            state.lastCursorMoveTime = Date.now();
-            handlePointerMove(e.clientX, e.clientY);
-        });
-
-        canvas.addEventListener('pointermove', (e) => {
-            if (state.isInteracting) handlePointerMove(e.clientX, e.clientY);
-        });
-
-        canvas.addEventListener('pointerup', handlePointerLeave);
-        canvas.addEventListener('pointercancel', handlePointerLeave);
-
-        canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            initAudio();
-            if (!state.audioStarted || !state.isPlaying) setAudioState(true);
-            if (e.touches.length > 0) {
-                state.lastRawX = e.touches[0].clientX - canvas.getBoundingClientRect().left;
-                state.lastCursorMoveTime = Date.now();
-                handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
-            }
-        }, { passive: false });
-
-        canvas.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            if (e.touches.length > 0 && state.isInteracting) {
-                handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
-            }
-        }, { passive: false });
-
-        canvas.addEventListener('touchend', (e) => { e.preventDefault(); handlePointerLeave(); }, { passive: false });
-        canvas.addEventListener('touchcancel', (e) => { e.preventDefault(); handlePointerLeave(); }, { passive: false });
-
-        function drawPianoOverlay() {
-            const minMidi = Math.round(freqToMidi(state.minFreq));
-            const maxMidi = Math.round(freqToMidi(state.maxFreq));
-            const logMin = Math.log2(state.minFreq);
-            const logSpan = Math.log2(state.maxFreq) - logMin;
-            const soundingMidi = Math.round(freqToMidi(state.currentFreq));
-
-            for (let m = minMidi; m <= maxMidi; m++) {
-                const xStart = Math.max(0, ((Math.log2(midiToFreq(m - 0.5)) - logMin) / logSpan) * canvas.width);
-                const xEnd = Math.min(canvas.width, ((Math.log2(midiToFreq(m + 0.5)) - logMin) / logSpan) * canvas.width);
-                const kw = xEnd - xStart;
-                const noteIdx = (m % 12 + 12) % 12;
-                const isRoot = noteIdx === state.rootKey;
-                const inScale = state.activeNotes[noteIdx];
-                const isSounding = state.isInteracting && soundingMidi === m;
-
-                ctx.fillStyle = isSounding ? (isRoot ? 'rgba(251, 191, 36, 0.4)' : 'rgba(6, 182, 212, 0.4)') : (inScale ? 'rgba(148, 163, 184, 0.08)' : 'rgba(148, 163, 184, 0.02)');
-                ctx.fillRect(xStart, 0, kw, canvas.height);
-                ctx.strokeStyle = inScale ? 'rgba(6, 182, 212, 0.2)' : 'rgba(255, 255, 255, 0.04)';
-                ctx.strokeRect(xStart, 0, kw, canvas.height);
-            }
-        }
-
-        function drawThereminCanvas() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            if (state.showPianoOverlay) drawPianoOverlay();
-
-            for (let i = state.trailPoints.length - 1; i >= 0; i--) {
-                const pt = state.trailPoints[i];
-                ctx.beginPath();
-                ctx.arc(pt.x, pt.y, pt.radius * pt.alpha, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(6, 182, 212, ${pt.alpha * 0.35})`;
-                ctx.fill();
-                pt.alpha -= 0.03;
-                if (pt.alpha <= 0) state.trailPoints.splice(i, 1);
-            }
-
-            if (state.isInteracting) {
-                const px = state.cursorX * canvas.width;
-                const py = (1 - state.cursorY) * canvas.height;
-                const snapLocked = state.quantizeMode !== 'free' && isSnapEngaged();
-
-                if (state.quantizeMode !== 'free') {
-                    const logMin = Math.log2(state.minFreq);
-                    const logMax = Math.log2(state.maxFreq);
-                    const targetFreq = calculateTargetFrequency(state.targetFreq);
-                    const snapX = Math.max(0, Math.min(1, (Math.log2(targetFreq) - logMin) / (logMax - logMin))) * canvas.width;
-
-                    if (Math.abs(px - snapX) > 1) {
-                        ctx.save();
-                        ctx.beginPath();
-                        ctx.moveTo(px, py); ctx.lineTo(snapX, py);
-                        ctx.strokeStyle = snapLocked ? '#fbbf24' : 'rgba(6, 182, 212, 0.6)';
-                        ctx.lineWidth = 2; ctx.setLineDash([4, 4]); ctx.stroke();
-                        ctx.restore();
-                    }
-                }
-
-                ctx.beginPath();
-                ctx.arc(px, py, 25, 0, Math.PI * 2);
-                ctx.fillStyle = snapLocked ? 'rgba(52, 211, 153, 0.3)' : 'rgba(6, 182, 212, 0.3)';
-                ctx.fill();
-            }
-        }
-
-        function drawRadialWheel(pitch) {
-            const w = radialCanvas.width;
-            const h = radialCanvas.height;
-            const cx = w / 2, cy = h / 2;
-            const radius = Math.min(w, h) / 2 - 8;
-
-            radialCtx.clearRect(0, 0, w, h);
-            for (let i = 0; i < 12; i++) {
-                const isRoot = i === state.rootKey;
-                const inScale = state.activeNotes[i];
-                const startAngle = (i / 12) * Math.PI * 2 - Math.PI / 2 - (Math.PI / 24);
-                const endAngle = startAngle + (Math.PI / 12);
-
-                if (inScale) {
-                    radialCtx.beginPath();
-                    radialCtx.arc(cx, cy, radius, startAngle, endAngle);
-                    radialCtx.strokeStyle = isRoot ? '#fbbf24' : '#06b6d4';
-                    radialCtx.lineWidth = isRoot ? 4 : 3;
-                    radialCtx.stroke();
-                }
-            }
-
-            const semitoneProgress = (pitch.midi % 12 + 12) % 12;
-            const angle = (semitoneProgress / 12) * Math.PI * 2 - Math.PI / 2;
-            const px = cx + Math.cos(angle) * (radius - 16);
-            const py = cy + Math.sin(angle) * (radius - 16);
-
-            radialCtx.beginPath();
-            radialCtx.arc(px, py, 5, 0, Math.PI * 2);
-            radialCtx.fillStyle = '#06b6d4';
-            radialCtx.fill();
-        }
-
-        function masterLoop() {
-            updateAudioNodes();
-            state.lfoPhase += (state.vibratoRate * Math.PI * 2) / 60;
-
-            const baseFreq = state.currentFreq;
-            const pitch = getPitchDetails(baseFreq);
-
-            displayFreq.textContent = `${baseFreq.toFixed(1)} Hz`;
-            displayVol.textContent = `${Math.round(state.currentVol * 100)}%`;
-            readoutNote.textContent = pitch.noteName;
-            readoutOctave.textContent = `Oct ${pitch.octave}`;
-            readoutCents.textContent = `${pitch.cents >= 0 ? '+' : ''}${pitch.cents} c`;
-
-            const centRatio = Math.max(-50, Math.min(50, pitch.cents)) / 50;
-            centBarFill.style.left = centRatio >= 0 ? '50%' : `${50 + centRatio * 50}%`;
-            centBarFill.style.width = `${Math.abs(centRatio) * 50}%`;
-
-            const logMin = Math.log2(state.minFreq);
-            const logMax = Math.log2(state.maxFreq);
-            const freqRatio = Math.max(0, Math.min(1, (Math.log2(baseFreq) - logMin) / (logMax - logMin)));
-            stripCursor.style.left = `${freqRatio * 100}%`;
-
-            if (state.vibratoEnabled) {
-                const ribbonWidthCents = (state.vibratoDepthCents / (1200 * (logMax - logMin))) * 100 * 2;
-                vibratoRibbon.style.display = 'block';
-                vibratoRibbon.style.left = `${freqRatio * 100}%`;
-                vibratoRibbon.style.width = `${Math.max(0.5, ribbonWidthCents)}%`;
-            } else {
-                vibratoRibbon.style.display = 'none';
-            }
-
-            ringNoteName.textContent = pitch.noteName;
-            ringOctave.textContent = `Oct ${pitch.octave}`;
-
-            drawThereminCanvas();
-            drawRadialWheel(pitch);
-            requestAnimationFrame(masterLoop);
-        }
-
-        function setupUIEventListeners() {
-            btnAudioToggle.addEventListener('click', () => setAudioState(!state.isPlaying));
-
-            // Mobile Drawer Controls
-            const drawer = document.getElementById('settings-drawer');
-            const backdrop = document.getElementById('settings-backdrop');
-            function toggleDrawer(open) {
-                drawer.classList.toggle('translate-x-full', !open);
-                backdrop.classList.toggle('hidden', !open);
-            }
-            document.getElementById('btn-toggle-drawer').addEventListener('click', () => toggleDrawer(true));
-            document.getElementById('btn-close-drawer').addEventListener('click', () => toggleDrawer(false));
-            backdrop.addEventListener('click', () => toggleDrawer(false));
-
-            document.getElementById('select-root-key').addEventListener('change', (e) => {
-                state.rootKey = parseInt(e.target.value);
-                updateScaleFromPreset();
-            });
-
-            document.getElementById('select-scale-preset').addEventListener('change', (e) => {
-                state.scalePreset = e.target.value;
-                updateScaleFromPreset();
-            });
-
-            document.getElementById('btn-scale-all').addEventListener('click', () => {
-                state.activeNotes = new Array(12).fill(true);
-                state.scalePreset = 'chromatic';
-                document.getElementById('select-scale-preset').value = 'chromatic';
-                renderNoteMatrixUI();
-                buildChromaticStripKeys();
-            });
-
-            document.getElementById('btn-scale-clear').addEventListener('click', () => {
-                state.activeNotes = new Array(12).fill(false);
-                state.scalePreset = 'custom';
-                document.getElementById('select-scale-preset').value = 'custom';
-                renderNoteMatrixUI();
-                buildChromaticStripKeys();
-            });
-
-            // Quantization Mode Buttons & Slider Unlock Fix
-            const btnModeFree = document.getElementById('btn-mode-free');
-            const btnModeScale = document.getElementById('btn-mode-scale');
-            const btnModeMagnet = document.getElementById('btn-mode-magnet');
-            const snapStatus = document.getElementById('snap-status');
-            const magnetContainer = document.getElementById('magnet-strength-container');
-            const snapDelayContainer = document.getElementById('snap-delay-container');
-
-            function updateQuantizeModeUI() {
-                btnModeFree.className = 'py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200 text-center';
-                btnModeScale.className = 'py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200 text-center';
-                btnModeMagnet.className = 'py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200 text-center';
-
-                const snapActive = state.quantizeMode !== 'free';
-                snapDelayContainer.style.opacity = snapActive ? '1' : '0.4';
-                snapDelayContainer.style.pointerEvents = snapActive ? 'auto' : 'none';
-
-                magnetContainer.style.opacity = state.quantizeMode === 'magnetic' ? '1' : '0.4';
-                magnetContainer.style.pointerEvents = state.quantizeMode === 'magnetic' ? 'auto' : 'none';
-
-                if (state.quantizeMode === 'free') {
-                    btnModeFree.className = 'py-1.5 rounded-lg font-medium transition-all bg-cyan-500 text-slate-950 font-semibold shadow text-center';
-                    snapStatus.textContent = 'Continuous';
-                } else if (state.quantizeMode === 'scale') {
-                    btnModeScale.className = 'py-1.5 rounded-lg font-medium transition-all bg-cyan-500 text-slate-950 font-semibold shadow text-center';
-                    snapStatus.textContent = 'Scale Snap';
-                } else if (state.quantizeMode === 'magnetic') {
-                    btnModeMagnet.className = 'py-1.5 rounded-lg font-medium transition-all bg-cyan-500 text-slate-950 font-semibold shadow text-center';
-                    snapStatus.textContent = 'Magnetic';
-                }
-            }
-
-            btnModeFree.addEventListener('click', () => { state.quantizeMode = 'free'; updateQuantizeModeUI(); });
-            btnModeScale.addEventListener('click', () => { state.quantizeMode = 'scale'; updateQuantizeModeUI(); });
-            btnModeMagnet.addEventListener('click', () => { state.quantizeMode = 'magnetic'; updateQuantizeModeUI(); });
-
-            document.getElementById('slider-magnet').addEventListener('input', (e) => {
-                state.magnetStrength = parseInt(e.target.value) / 100;
-                document.getElementById('magnet-value').textContent = `${e.target.value}%`;
-            });
-
-            document.getElementById('slider-snap-delay').addEventListener('input', (e) => {
-                state.snapDelayMs = parseInt(e.target.value);
-                document.getElementById('snap-delay-value').textContent = `${state.snapDelayMs} ms`;
-            });
-
-            document.getElementById('slider-glide').addEventListener('input', (e) => {
-                state.glideTimeMs = parseInt(e.target.value);
-                document.getElementById('glide-value').textContent = `${state.glideTimeMs} ms`;
-            });
-
-            document.getElementById('select-range').addEventListener('change', (e) => {
-                const RANGE_PRESETS = {
-                    'C2-C6': { min: 65.41, max: 1046.50, label: 'C2 - C6' },
-                    'C3-C5': { min: 130.81, max: 523.25, label: 'C3 - C5' },
-                    'C4-C7': { min: 261.63, max: 2093.00, label: 'C4 - C7' }
-                };
-                const preset = RANGE_PRESETS[e.target.value];
-                if (!preset) return;
-                state.minFreq = preset.min;
-                state.maxFreq = preset.max;
-                document.getElementById('range-value').textContent = preset.label;
-                buildChromaticStripKeys();
-            });
-
-            // Tabs
-            const visTabs = document.querySelectorAll('.vis-tab-btn');
-            const visPanels = document.querySelectorAll('.vis-panel');
-            visTabs.forEach(tab => {
-                tab.addEventListener('click', () => {
-                    const targetId = tab.getAttribute('data-target');
-                    visTabs.forEach(t => t.className = 'vis-tab-btn flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800');
-                    tab.className = 'vis-tab-btn active flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 bg-cyan-500 text-slate-950 font-semibold shadow';
-                    visPanels.forEach(panel => panel.classList.toggle('hidden', panel.id !== targetId));
-                });
-            });
-
-            // Waveforms
-            document.querySelectorAll('.wave-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    document.querySelectorAll('.wave-btn').forEach(b => b.className = 'wave-btn p-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 flex flex-col items-center gap-1 text-xs');
-                    btn.className = 'wave-btn active p-2 rounded-xl border border-slate-800 bg-slate-950 text-cyan-400 flex flex-col items-center gap-1 text-xs';
-                    state.waveform = btn.getAttribute('data-wave');
-                    if (state.osc) state.osc.type = state.waveform;
-                });
-            });
-
-            // Vibrato
-            const toggleVibrato = document.getElementById('toggle-vibrato');
-            const vibratoControls = document.getElementById('vibrato-controls');
-            toggleVibrato.addEventListener('change', (e) => {
-                state.vibratoEnabled = e.target.checked;
-                vibratoControls.style.opacity = state.vibratoEnabled ? '1' : '0.4';
-                vibratoControls.style.pointerEvents = state.vibratoEnabled ? 'auto' : 'none';
-            });
-
-            document.getElementById('slider-vib-rate').addEventListener('input', (e) => {
-                state.vibratoRate = parseFloat(e.target.value);
-                document.getElementById('vib-rate-val').textContent = `${state.vibratoRate.toFixed(1)} Hz`;
-            });
-            document.getElementById('slider-vib-depth').addEventListener('input', (e) => {
-                state.vibratoDepthCents = parseInt(e.target.value);
-                document.getElementById('vib-depth-val').textContent = `${state.vibratoDepthCents} Cents`;
-            });
-
-            document.getElementById('toggle-trails').addEventListener('change', (e) => state.showTrails = e.target.checked);
-            document.getElementById('toggle-piano-overlay').addEventListener('change', (e) => state.showPianoOverlay = e.target.checked);
-
-            const helpModal = document.getElementById('help-modal');
-            document.getElementById('btn-help').addEventListener('click', () => helpModal.classList.remove('hidden'));
-            document.getElementById('btn-close-modal').addEventListener('click', () => helpModal.classList.add('hidden'));
-            document.getElementById('btn-modal-ok').addEventListener('click', () => helpModal.classList.add('hidden'));
-        }
-
-        window.addEventListener('load', () => {
-            resizeCanvases();
-            updateScaleFromPreset();
-            renderNoteMatrixUI();
-            buildChromaticStripKeys();
-            setupUIEventListeners();
-            requestAnimationFrame(masterLoop);
-        });
-    </script>
+<body>
+<header>
+ <h1>〰 Aether Theremin</h1>
+ <div class="hb">
+  <button id="audio" class="live">Sound</button>
+  <button id="vibb" class="am" title="Space">Vib</button>
+  <button id="gear">⚙ Settings</button>
+ </div>
+</header>
+
+<div id="work">
+<main>
+ <div id="pad">
+  <canvas id="cv"></canvas>
+  <div class="hud"><div><div id="rn">--</div></div><div><span id="rf">0 Hz</span> · <span id="rv">0%</span><small id="rc">0 cents</small></div></div>
+  <button id="fsb" aria-label="Fullscreen">⛶</button>
+  <div id="hint">Touch &amp; drag · ↔ pitch · ↕ volume</div>
+ </div>
+ <div id="bar">
+  <div class="grp">Low <select id="lo"></select><span class="hz" id="lohz"></span></div>
+  <div class="grp">High <select id="hi"></select><span class="hz" id="hihz"></span></div>
+  <div class="grp"><button id="octd" style="padding:0 10px">−8va</button><button id="octu" style="padding:0 10px">+8va</button></div>
+  <div class="seg" id="modes"><button data-m="free" class="on">Free</button><button data-m="scale">Scale</button><button data-m="magnetic">Magnet</button></div>
+ </div>
+</main>
+
+<div id="backdrop"></div>
+<aside id="set">
+ <div class="row" style="font-size:14px;font-weight:700"><span>Settings</span><button id="close" style="min-height:34px">Done</button></div>
+ <div>
+  <h2>Key &amp; Scale</h2>
+  <div class="g2" style="margin-bottom:8px">
+   <select id="root"></select>
+   <select id="scale">
+    <option value="chromatic">Chromatic</option><option value="major">Major</option>
+    <option value="natural_minor" selected>Natural Minor</option><option value="harmonic_minor">Harmonic Minor</option>
+    <option value="pentatonic_minor">Pentatonic Minor</option><option value="pentatonic_major">Pentatonic Major</option>
+    <option value="blues">Blues</option><option value="dorian">Dorian</option><option value="custom">Custom</option>
+   </select>
+  </div>
+  <div id="nm"></div>
+ </div>
+ <div>
+  <h2>Pitch</h2>
+  <div class="row"><span>Snap delay</span><b id="sdv">300 ms</b></div>
+  <input id="sd" type="range" min="0" max="1500" step="50" value="300">
+  <div class="row"><span>Magnet strength</span><b id="mgv">50%</b></div>
+  <input id="mg" type="range" min="10" max="100" value="50">
+  <div class="row"><span>Glide</span><b id="glv">30 ms</b></div>
+  <input id="gl" type="range" min="0" max="250" value="30">
+ </div>
+ <div>
+  <h2>Timbre</h2>
+  <div class="waves" id="waves"><button data-w="sine" class="on">Sine</button><button data-w="triangle">Tri</button><button data-w="sawtooth">Saw</button><button data-w="square">Sq</button></div>
+  <div class="row" style="margin-top:8px"><span>Vibrato rate</span><b id="vrv">5.0 Hz</b></div>
+  <input id="vr" type="range" min="0.5" max="15" step="0.1" value="5">
+  <div class="row"><span>Vibrato depth</span><b id="vdv">25 cents</b></div>
+  <input id="vd" type="range" min="0" max="100" value="25">
+ </div>
+ <div>
+  <h2>Display</h2>
+  <label class="ck"><input type="checkbox" id="tl" checked> Motion trails</label>
+  <label class="ck"><input type="checkbox" id="lb" checked> Note names on keys</label>
+ </div>
+</aside>
+</div>
+
+<script>
+const NN=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+const SCALES={chromatic:[0,1,2,3,4,5,6,7,8,9,10,11],major:[0,2,4,5,7,9,11],natural_minor:[0,2,3,5,7,8,10],harmonic_minor:[0,2,3,5,7,8,11],pentatonic_minor:[0,3,5,7,10],pentatonic_major:[0,2,4,7,9],blues:[0,3,5,6,7,10],dorian:[0,2,3,5,7,9,10]};
+const pc=m=>((m%12)+12)%12, isBlack=m=>[1,3,6,8,10].includes(pc(m));
+const m2f=m=>440*2**((m-69)/12), f2m=f=>69+12*Math.log2(f/440);
+const label=m=>NN[pc(m)]+(Math.floor(m/12)-1);
+const MIN=24,MAX=108;
+const $=id=>document.getElementById(id);
+
+const S={ac:null,osc:null,gain:null,vo:null,vg:null,playing:false,
+ low:60,high:84,targetMidi:72,curMidi:72,vol:0,targetVol:0,glide:30,
+ root:9,preset:'natural_minor',active:Array(12).fill(false),
+ mode:'free',magnet:.5,snapDelay:300,lastMove:0,lastX:0,
+ wave:'sine',vib:false,vibRate:5,vibDepth:25,trails:true,labels:true,
+ down:false,cx:.5,cy:.5,pts:[],fs:false};
+
+/* ---------- piano layout ---------- */
+let keys=[],u0=0,u1=1;
+function buildLayout(){
+ keys=[];let w=0;
+ for(let m=S.low;m<=S.high;m++){
+  if(isBlack(m))keys.push({m,b:true,cx:w,x0:w-.3,x1:w+.3});
+  else{keys.push({m,b:false,cx:w+.5,x0:w,x1:w+1});w++;}
+ }
+ u0=keys[0].b?-.3:0; u1=keys[keys.length-1].b?w+.3:w;
+}
+function pToMidi(p){
+ const u=u0+p*(u1-u0);
+ if(u<=keys[0].cx)return keys[0].m;
+ for(let i=1;i<keys.length;i++)if(u<=keys[i].cx){const a=keys[i-1],b=keys[i];return a.m+(u-a.cx)/(b.cx-a.cx);}
+ return keys[keys.length-1].m;
+}
+function midiToP(m){
+ m=Math.max(S.low,Math.min(S.high,m));
+ const i=Math.max(0,Math.min(keys.length-2,Math.floor(m)-S.low));
+ const a=keys[i],b=keys[i+1];
+ return (a.cx+(m-a.m)*(b.cx-a.cx)-u0)/(u1-u0);
+}
+
+/* ---------- scale / quantize ---------- */
+function applyPreset(){
+ if(S.preset==='custom')return;
+ S.active=Array(12).fill(false);
+ SCALES[S.preset].forEach(o=>S.active[(S.root+o)%12]=true);
+ renderMatrix();
+}
+function renderMatrix(){
+ const c=$('nm');c.innerHTML='';
+ for(let i=0;i<12;i++){
+  const b=document.createElement('button');
+  b.textContent=NN[i];
+  b.className=S.active[i]?(i===S.root?'r':'a'):'';
+  b.onclick=()=>{S.active[i]=!S.active[i];S.preset='custom';$('scale').value='custom';renderMatrix();};
+  c.appendChild(b);
+ }
+}
+function nearestScale(m){
+ let best=m,d=1e9;
+ for(let c=Math.floor(m)-6;c<=Math.ceil(m)+6;c++){
+  if(c<S.low||c>S.high||!S.active[pc(c)])continue;
+  const x=Math.abs(m-c);if(x<d){d=x;best=c;}
+ }
+ return best;
+}
+const snapOn=()=>S.snapDelay<=0||Date.now()-S.lastMove>=S.snapDelay;
+function quantize(m){
+ if(S.mode==='free'||!snapOn())return m;
+ const s=nearestScale(m);
+ return S.mode==='scale'?s:m+(s-m)*S.magnet;
+}
+
+/* ---------- audio ---------- */
+function initAudio(){
+ if(!S.ac){
+  const AC=window.AudioContext||window.webkitAudioContext;
+  S.ac=new AC();const t=S.ac.currentTime;
+  S.osc=S.ac.createOscillator();S.osc.type=S.wave;S.osc.frequency.setValueAtTime(m2f(S.targetMidi),t);
+  S.gain=S.ac.createGain();S.gain.gain.setValueAtTime(0,t);
+  S.vo=S.ac.createOscillator();S.vo.frequency.setValueAtTime(S.vibRate,t);
+  S.vg=S.ac.createGain();S.vg.gain.setValueAtTime(0,t);
+  S.vo.connect(S.vg);S.vg.connect(S.osc.frequency);
+  S.osc.connect(S.gain);S.gain.connect(S.ac.destination);
+  S.osc.start();S.vo.start();
+ }
+ if(S.ac.state!=='running')S.ac.resume();
+}
+function setSound(on){
+ initAudio();S.playing=on;
+ const b=$('audio');b.classList.toggle('live',on);b.textContent=on?'🔊 On':'🔇 Muted';
+}
+function updateAudio(){
+ const qm=quantize(S.targetMidi);
+ S.curMidi+=(qm-S.curMidi)*.3;
+ const g=S.down&&S.playing?S.targetVol:0;
+ S.vol+=(g-S.vol)*.25;
+ if(!S.ac)return;
+ const t=S.ac.currentTime,f=m2f(qm);
+ S.osc.frequency.setTargetAtTime(f,t,Math.max(.005,S.glide/1000));
+ S.gain.gain.setTargetAtTime(g,t,.015);
+ S.vo.frequency.setTargetAtTime(S.vibRate,t,.05);
+ S.vg.gain.setTargetAtTime(S.vib?f*(2**(S.vibDepth/1200)-1):0,t,.05);
+}
+
+/* ---------- canvas ---------- */
+const cv=$('cv'),ctx=cv.getContext('2d');let W=0,H=0;
+function resize(){
+ const r=cv.getBoundingClientRect(),d=window.devicePixelRatio||1;
+ W=r.width;H=r.height;cv.width=Math.round(W*d);cv.height=Math.round(H*d);
+ ctx.setTransform(d,0,0,d,0,0);
+}
+new ResizeObserver(resize).observe($('pad'));
+function grad(a,b){const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,a);g.addColorStop(.85,b);g.addColorStop(1,b);return g;}
+function rr(x,y,w,h,r){ctx.beginPath();ctx.roundRect?ctx.roundRect(x,y,w,h,[0,0,r,r]):ctx.rect(x,y,w,h);}
+function drawPad(){
+ ctx.clearRect(0,0,W,H);
+ const ku=W/(u1-u0),X=u=>(u-u0)*ku;
+ const snd=S.down?Math.round(S.curMidi):null;
+ const gW=grad('#f8fafc','#cbd5e1'),gO=grad('#94a3b8','#64748b'),gS=grad('#a5f3fc','#06b6d4'),gR=grad('#fef3c7','#fbbf24');
+ ctx.textAlign='center';
+ for(const k of keys){ if(k.b)continue;
+  const x=X(k.x0),on=S.active[pc(k.m)],root=pc(k.m)===S.root&&on;
+  ctx.fillStyle=k.m===snd?gS:root?gR:on?gW:gO;
+  rr(x+.5,-6,ku-1,H+6,Math.min(8,ku*.3));ctx.fill();
+  if(S.labels){
+   const full=ku>=24||pc(k.m)===0;
+   if(ku>=13||pc(k.m)===0){
+    ctx.fillStyle=on?'#0f172a':'#1e293b';
+    ctx.font=`700 ${Math.max(9,Math.min(14,ku*.42))}px system-ui`;
+    ctx.fillText(full?label(k.m):NN[pc(k.m)],x+ku/2,H-12);
+   }
+  }
+ }
+ for(const k of keys){ if(!k.b)continue;
+  const x=X(k.x0),w=(k.x1-k.x0)*ku,h=H*.6,on=S.active[pc(k.m)],root=pc(k.m)===S.root&&on;
+  ctx.fillStyle=k.m===snd?'#06b6d4':on?grad('#475569','#1e293b'):'#0b1220';
+  rr(x,-6,w,h+6,Math.min(6,w*.3));ctx.fill();
+  ctx.strokeStyle=on?'rgba(34,211,238,.55)':'rgba(148,163,184,.25)';ctx.lineWidth=1;ctx.stroke();
+  if(root){ctx.fillStyle='#fbbf24';ctx.fillRect(x+w*.25,h-5,w*.5,3);}
+  if(S.labels&&w>=13){
+   ctx.fillStyle=k.m===snd?'#083344':on?'#e2e8f0':'#64748b';
+   ctx.font=`600 ${Math.max(8,Math.min(11,w*.5))}px system-ui`;
+   ctx.fillText(NN[pc(k.m)],x+w/2,h-12);
+  }
+ }
+ // trails
+ for(let i=S.pts.length-1;i>=0;i--){
+  const p=S.pts[i];ctx.beginPath();ctx.arc(p.x,p.y,p.r*p.a,0,7);
+  ctx.fillStyle=`rgba(6,182,212,${p.a*.35})`;ctx.fill();
+  p.a-=.035;if(p.a<=0)S.pts.splice(i,1);
+ }
+ if(S.down){
+  const px=S.cx*W,py=(1-S.cy)*H,locked=S.mode!=='free'&&snapOn();
+  if(S.mode!=='free'){
+   const sx=midiToP(quantize(S.targetMidi))*W;
+   if(Math.abs(px-sx)>1){ctx.save();ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(sx,py);
+    ctx.strokeStyle=locked?'#fbbf24':'rgba(6,182,212,.7)';ctx.lineWidth=2;ctx.setLineDash([4,4]);ctx.stroke();ctx.restore();}
+  }
+  ctx.beginPath();ctx.arc(px,py,22+S.cy*10,0,7);
+  ctx.fillStyle=locked?'rgba(52,211,153,.4)':'rgba(6,182,212,.4)';ctx.fill();
+  ctx.lineWidth=2;ctx.strokeStyle='#fff';ctx.stroke();
+ }
+}
+
+/* ---------- input ---------- */
+let pid=null;
+function move(e){
+ const r=cv.getBoundingClientRect(),rx=e.clientX-r.left;
+ if(Math.abs(rx-S.lastX)>2){S.lastMove=Date.now();S.lastX=rx;}
+ const x=Math.max(0,Math.min(1,rx/r.width)),y=Math.max(0,Math.min(1,1-(e.clientY-r.top)/r.height));
+ S.cx=x;S.cy=y;S.down=true;
+ S.targetMidi=pToMidi(x);S.targetVol=Math.pow(y,1.5);
+ $('hint').style.opacity=0;
+ if(S.trails)S.pts.push({x:rx,y:e.clientY-r.top,a:1,r:10+y*16});
+}
+cv.addEventListener('pointerdown',e=>{
+ e.preventDefault();cv.setPointerCapture(e.pointerId);pid=e.pointerId;
+ initAudio();if(!S.playing)setSound(true);
+ S.lastX=e.clientX-cv.getBoundingClientRect().left;S.lastMove=Date.now();move(e);
+});
+cv.addEventListener('pointermove',e=>{if(e.pointerId===pid&&S.down)move(e);});
+const up=e=>{if(e.pointerId===pid){S.down=false;pid=null;}};
+cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+
+/* ---------- fullscreen ---------- */
+function setFS(on){
+ S.fs=on;$('pad').classList.toggle('fs',on);
+ $('fsb').textContent=on?'✕':'⛶';
+ const pad=$('pad');
+ if(on&&pad.requestFullscreen)pad.requestFullscreen({navigationUI:'hide'}).catch(()=>{});
+ if(!on&&document.fullscreenElement)document.exitFullscreen().catch(()=>{});
+ setTimeout(resize,60);
+}
+$('fsb').onclick=()=>setFS(!S.fs);
+document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&S.fs)setFS(false);});
+addEventListener('keydown',e=>{
+ if(e.code==='Space'&&!/SELECT|INPUT|BUTTON/.test(e.target.tagName)){e.preventDefault();toggleVib();}
+ if(e.key==='Escape'&&S.fs)setFS(false);
+ if(e.key==='f'&&!/SELECT|INPUT/.test(e.target.tagName))setFS(!S.fs);
+});
+
+/* ---------- range ---------- */
+function fillRange(){
+ for(const id of ['lo','hi']){
+  const s=$(id);s.innerHTML='';
+  for(let m=MIN;m<=MAX;m++){const o=document.createElement('option');o.value=m;o.textContent=label(m);s.appendChild(o);}
+ }
+}
+function setRange(lo,hi,from){
+ lo=Math.max(MIN,Math.min(MAX-1,lo));hi=Math.max(MIN+1,Math.min(MAX,hi));
+ if(lo>=hi){ if(from==='lo')hi=Math.min(MAX,lo+12);else lo=Math.max(MIN,hi-12); if(lo>=hi){lo=hi-1;} }
+ S.low=lo;S.high=hi;
+ $('lo').value=lo;$('hi').value=hi;
+ $('lohz').textContent=Math.round(m2f(lo))+' Hz';$('hihz').textContent=Math.round(m2f(hi))+' Hz';
+ buildLayout();
+ S.targetMidi=Math.max(lo,Math.min(hi,S.targetMidi));S.curMidi=S.targetMidi;
+}
+$('lo').onchange=e=>setRange(+e.target.value,S.high,'lo');
+$('hi').onchange=e=>setRange(S.low,+e.target.value,'hi');
+$('octd').onclick=()=>{if(S.low-12>=MIN)setRange(S.low-12,S.high-12);};
+$('octu').onclick=()=>{if(S.high+12<=MAX)setRange(S.low+12,S.high+12);};
+
+/* ---------- UI wiring ---------- */
+function toggleVib(){S.vib=!S.vib;$('vibb').classList.toggle('on',S.vib);$('vibb').textContent=S.vib?'Vib ON':'Vib';}
+$('vibb').onclick=toggleVib;
+$('audio').onclick=()=>setSound(!S.playing);
+const drawer=$('set');
+const openDrawer=o=>{drawer.classList.toggle('open',o);$('backdrop').style.display=o?'block':'none';};
+$('gear').onclick=()=>openDrawer(true);$('close').onclick=()=>openDrawer(false);$('backdrop').onclick=()=>openDrawer(false);
+if(innerWidth>=1024)$('close').style.display='none';
+
+document.querySelectorAll('#modes button').forEach(b=>b.onclick=()=>{
+ S.mode=b.dataset.m;
+ document.querySelectorAll('#modes button').forEach(x=>x.classList.toggle('on',x===b));
+});
+$('root').innerHTML=NN.map((n,i)=>`<option value="${i}"${i===9?' selected':''}>${n}</option>`).join('');
+$('root').onchange=e=>{S.root=+e.target.value;if(S.preset==='custom')renderMatrix();else applyPreset();};
+$('scale').onchange=e=>{S.preset=e.target.value;applyPreset();};
+const sl=(id,out,fn,fmt)=>$(id).oninput=e=>{fn(+e.target.value);$(out).textContent=fmt(+e.target.value);};
+sl('sd','sdv',v=>S.snapDelay=v,v=>v+' ms');
+sl('mg','mgv',v=>S.magnet=v/100,v=>v+'%');
+sl('gl','glv',v=>S.glide=v,v=>v+' ms');
+sl('vr','vrv',v=>S.vibRate=v,v=>v.toFixed(1)+' Hz');
+sl('vd','vdv',v=>S.vibDepth=v,v=>v+' cents');
+document.querySelectorAll('#waves button').forEach(b=>b.onclick=()=>{
+ S.wave=b.dataset.w;if(S.osc)S.osc.type=S.wave;
+ document.querySelectorAll('#waves button').forEach(x=>x.classList.toggle('on',x===b));
+});
+$('tl').onchange=e=>S.trails=e.target.checked;
+$('lb').onchange=e=>S.labels=e.target.checked;
+
+/* ---------- loop ---------- */
+const rn=$('rn'),rf=$('rf'),rv=$('rv'),rc=$('rc');
+function loop(){
+ updateAudio();
+ const m=S.curMidi,n=Math.round(m),c=Math.round((m-n)*100);
+ rn.textContent=S.down||S.vol>.01?label(n):'--';
+ rf.textContent=m2f(m).toFixed(1)+' Hz';rv.textContent=Math.round(S.vol*100)+'%';
+ rc.textContent=(c>=0?'+':'')+c+' cents';
+ drawPad();requestAnimationFrame(loop);
+}
+fillRange();setRange(60,84);applyPreset();$('audio').classList.remove('live');$('audio').textContent='Tap to start';
+requestAnimationFrame(()=>{resize();loop();});
+</script>
 </body>
 </html>
