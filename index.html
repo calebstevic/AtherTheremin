@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Visual Theremin Prototype</title>
+    <title>Visual Theremin Studio</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -20,37 +20,18 @@
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
                         mono: ['JetBrains Mono', 'monospace'],
-                    },
-                    colors: {
-                        ether: {
-                            50: '#f0fdfa',
-                            500: '#14b8a6',
-                            900: '#134e4a',
-                            glow: '#06b6d4'
-                        }
                     }
                 }
             }
         }
     </script>
     <style>
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #0f172a;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #334155;
-            border-radius: 3px;
-        }
-        .theremin-canvas {
-            cursor: crosshair;
-            touch-action: none;
-        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        .theremin-canvas { cursor: crosshair; touch-action: none; }
         .glass-panel {
-            background: rgba(15, 23, 42, 0.85);
+            background: rgba(15, 23, 42, 0.88);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.08);
         }
@@ -72,7 +53,7 @@
             </div>
         </div>
 
-        <!-- Audio Start/Stop & Quick Controls -->
+        <!-- Controls -->
         <div class="flex items-center gap-2">
             <button id="btn-audio-toggle" class="px-3.5 sm:px-5 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 transition-all shadow-lg shadow-emerald-500/20 active:scale-95">
                 <i class="fa-solid fa-power-off text-sm"></i>
@@ -427,7 +408,7 @@
         </div>
     </div>
 
-    <!-- SCRIPT LOGIC -->
+    <!-- APPLICATION SCRIPT LOGIC -->
     <script>
         const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
@@ -697,7 +678,6 @@
 
         function handlePointerLeave() { state.isInteracting = false; }
 
-        // Robust Touch & Mouse Handlers for Mobile & Web
         canvas.addEventListener('pointerdown', (e) => {
             canvas.setPointerCapture(e.pointerId);
             initAudio();
@@ -714,7 +694,6 @@
         canvas.addEventListener('pointerup', handlePointerLeave);
         canvas.addEventListener('pointercancel', handlePointerLeave);
 
-        // Explicit Mobile Touch Support
         canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             initAudio();
@@ -923,12 +902,118 @@
 
             function updateQuantizeModeUI() {
                 btnModeFree.className = 'py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200 text-center';
-                btnModeScale.className = 'py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition-all text-center';
-                btnModeMagnet.className = 'py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition-all text-center';
+                btnModeScale.className = 'py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200 text-center';
+                btnModeMagnet.className = 'py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200 text-center';
 
                 const snapActive = state.quantizeMode !== 'free';
                 snapDelayContainer.style.opacity = snapActive ? '1' : '0.4';
                 snapDelayContainer.style.pointerEvents = snapActive ? 'auto' : 'none';
 
                 magnetContainer.style.opacity = state.quantizeMode === 'magnetic' ? '1' : '0.4';
-                magnetContainer.style.pointerEvents = state.
+                magnetContainer.style.pointerEvents = state.quantizeMode === 'magnetic' ? 'auto' : 'none';
+
+                if (state.quantizeMode === 'free') {
+                    btnModeFree.className = 'py-1.5 rounded-lg font-medium transition-all bg-cyan-500 text-slate-950 font-semibold shadow text-center';
+                    snapStatus.textContent = 'Continuous';
+                } else if (state.quantizeMode === 'scale') {
+                    btnModeScale.className = 'py-1.5 rounded-lg font-medium transition-all bg-cyan-500 text-slate-950 font-semibold shadow text-center';
+                    snapStatus.textContent = 'Scale Snap';
+                } else if (state.quantizeMode === 'magnetic') {
+                    btnModeMagnet.className = 'py-1.5 rounded-lg font-medium transition-all bg-cyan-500 text-slate-950 font-semibold shadow text-center';
+                    snapStatus.textContent = 'Magnetic';
+                }
+            }
+
+            btnModeFree.addEventListener('click', () => { state.quantizeMode = 'free'; updateQuantizeModeUI(); });
+            btnModeScale.addEventListener('click', () => { state.quantizeMode = 'scale'; updateQuantizeModeUI(); });
+            btnModeMagnet.addEventListener('click', () => { state.quantizeMode = 'magnetic'; updateQuantizeModeUI(); });
+
+            document.getElementById('slider-magnet').addEventListener('input', (e) => {
+                state.magnetStrength = parseInt(e.target.value) / 100;
+                document.getElementById('magnet-value').textContent = `${e.target.value}%`;
+            });
+
+            document.getElementById('slider-snap-delay').addEventListener('input', (e) => {
+                state.snapDelayMs = parseInt(e.target.value);
+                document.getElementById('snap-delay-value').textContent = `${state.snapDelayMs} ms`;
+            });
+
+            document.getElementById('slider-glide').addEventListener('input', (e) => {
+                state.glideTimeMs = parseInt(e.target.value);
+                document.getElementById('glide-value').textContent = `${state.glideTimeMs} ms`;
+            });
+
+            document.getElementById('select-range').addEventListener('change', (e) => {
+                const RANGE_PRESETS = {
+                    'C2-C6': { min: 65.41, max: 1046.50, label: 'C2 - C6' },
+                    'C3-C5': { min: 130.81, max: 523.25, label: 'C3 - C5' },
+                    'C4-C7': { min: 261.63, max: 2093.00, label: 'C4 - C7' }
+                };
+                const preset = RANGE_PRESETS[e.target.value];
+                if (!preset) return;
+                state.minFreq = preset.min;
+                state.maxFreq = preset.max;
+                document.getElementById('range-value').textContent = preset.label;
+                buildChromaticStripKeys();
+            });
+
+            // Tabs
+            const visTabs = document.querySelectorAll('.vis-tab-btn');
+            const visPanels = document.querySelectorAll('.vis-panel');
+            visTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const targetId = tab.getAttribute('data-target');
+                    visTabs.forEach(t => t.className = 'vis-tab-btn flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800');
+                    tab.className = 'vis-tab-btn active flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 bg-cyan-500 text-slate-950 font-semibold shadow';
+                    visPanels.forEach(panel => panel.classList.toggle('hidden', panel.id !== targetId));
+                });
+            });
+
+            // Waveforms
+            document.querySelectorAll('.wave-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.wave-btn').forEach(b => b.className = 'wave-btn p-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 flex flex-col items-center gap-1 text-xs');
+                    btn.className = 'wave-btn active p-2 rounded-xl border border-slate-800 bg-slate-950 text-cyan-400 flex flex-col items-center gap-1 text-xs';
+                    state.waveform = btn.getAttribute('data-wave');
+                    if (state.osc) state.osc.type = state.waveform;
+                });
+            });
+
+            // Vibrato
+            const toggleVibrato = document.getElementById('toggle-vibrato');
+            const vibratoControls = document.getElementById('vibrato-controls');
+            toggleVibrato.addEventListener('change', (e) => {
+                state.vibratoEnabled = e.target.checked;
+                vibratoControls.style.opacity = state.vibratoEnabled ? '1' : '0.4';
+                vibratoControls.style.pointerEvents = state.vibratoEnabled ? 'auto' : 'none';
+            });
+
+            document.getElementById('slider-vib-rate').addEventListener('input', (e) => {
+                state.vibratoRate = parseFloat(e.target.value);
+                document.getElementById('vib-rate-val').textContent = `${state.vibratoRate.toFixed(1)} Hz`;
+            });
+            document.getElementById('slider-vib-depth').addEventListener('input', (e) => {
+                state.vibratoDepthCents = parseInt(e.target.value);
+                document.getElementById('vib-depth-val').textContent = `${state.vibratoDepthCents} Cents`;
+            });
+
+            document.getElementById('toggle-trails').addEventListener('change', (e) => state.showTrails = e.target.checked);
+            document.getElementById('toggle-piano-overlay').addEventListener('change', (e) => state.showPianoOverlay = e.target.checked);
+
+            const helpModal = document.getElementById('help-modal');
+            document.getElementById('btn-help').addEventListener('click', () => helpModal.classList.remove('hidden'));
+            document.getElementById('btn-close-modal').addEventListener('click', () => helpModal.classList.add('hidden'));
+            document.getElementById('btn-modal-ok').addEventListener('click', () => helpModal.classList.add('hidden'));
+        }
+
+        window.addEventListener('load', () => {
+            resizeCanvases();
+            updateScaleFromPreset();
+            renderNoteMatrixUI();
+            buildChromaticStripKeys();
+            setupUIEventListeners();
+            requestAnimationFrame(masterLoop);
+        });
+    </script>
+</body>
+</html>
