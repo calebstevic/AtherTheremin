@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Theremin Prototype</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        ether: {
+                            50: '#f0fdfa',
+                            500: '#14b8a6',
+                            900: '#134e4a',
+                            glow: '#06b6d4'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbars & canvas cursor */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        .theremin-canvas {
+            cursor: crosshair;
+            touch-action: none;
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glow-cyan {
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.35);
+        }
+    </style>
+</head>
+<body class="h-full font-sans antialiased flex flex-col overflow-x-hidden selection:bg-cyan-500 selection:text-slate-950">
+
+    <!-- Top Navigation Header -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur px-4 py-3 flex flex-wrap items-center justify-between gap-4 z-20">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-500 flex items-center justify-center text-slate-950 font-bold text-xl shadow-lg shadow-cyan-500/20">
+                <i class="fa-solid fa-wave-square"></i>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold tracking-tight bg-gradient-to-r from-cyan-400 via-sky-200 to-indigo-300 bg-clip-text text-transparent">
+                    AetherTheremin <span class="text-xs px-2 py-0.5 rounded-full bg-cyan-950 border border-cyan-800 text-cyan-400 font-mono">Visual Lab</span>
+                </h1>
+                <p class="text-xs text-slate-400">Continuous Pitch Controller & Visualizers</p>
+            </div>
+        </div>
+
+        <!-- Audio Start/Stop & Quick Controls -->
+        <div class="flex items-center gap-3">
+            <button id="btn-audio-toggle" class="px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 transition-all shadow-lg shadow-emerald-500/20 active:scale-95">
+                <i class="fa-solid fa-power-off text-base"></i>
+                <span>Activate Audio</span>
+            </button>
+            <button id="btn-vibrato-bypass" class="px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all active:scale-95">
+                <i class="fa-solid fa-bolt text-amber-400"></i>
+                <span id="vibrato-bypass-label">Vibrato: OFF</span>
+                <span class="text-[10px] font-mono text-slate-400 border border-slate-600 px-1.5 py-0.5 rounded">SPACE</span>
+            </button>
+            <button id="btn-help" class="w-10 h-10 rounded-xl glass-panel hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-cyan-400 transition-colors">
+                <i class="fa-solid fa-circle-info text-lg"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+        
+        <!-- Left: Interactive Canvas & Overlay Visualizers -->
+        <main class="flex-1 flex flex-col p-4 gap-4 overflow-y-auto relative min-h-[500px]">
+            
+            <!-- Theremin Touchpad Canvas Container -->
+            <div class="flex-1 relative rounded-2xl overflow-hidden glass-panel flex flex-col shadow-2xl border border-slate-800">
+                
+                <!-- Canvas Bar Info Header -->
+                <div class="absolute top-3 left-4 right-4 flex items-center justify-between pointer-events-none z-10">
+                    <div class="flex items-center gap-2 bg-slate-950/70 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-800 text-xs font-mono text-slate-300">
+                        <span class="text-cyan-400"><i class="fa-solid fa-arrows-arrows-x"></i> Pitch:</span>
+                        <span id="display-freq">0.0 Hz</span>
+                        <span class="text-slate-600">|</span>
+                        <span class="text-indigo-400"><i class="fa-solid fa-arrows-arrows-y"></i> Vol:</span>
+                        <span id="display-vol">0%</span>
+                    </div>
+
+                    <!-- Note Readout Box -->
+                    <div id="readout-card" class="bg-slate-950/80 backdrop-blur px-4 py-1.5 rounded-xl border border-cyan-500/30 flex items-center gap-3 shadow-lg transition-all">
+                        <div class="text-right">
+                            <div id="readout-note" class="text-xl font-bold font-mono text-cyan-300 leading-none">--</div>
+                            <div id="readout-octave" class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Note</div>
+                        </div>
+                        <div class="w-px h-7 bg-slate-800"></div>
+                        <div>
+                            <div id="readout-cents" class="text-sm font-mono font-bold text-amber-400 leading-none">0 cents</div>
+                            <div class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Deviation</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Touchpad Canvas -->
+                <canvas id="theremin-canvas" class="theremin-canvas flex-1 w-full h-full bg-slate-950/90"></canvas>
+
+                <!-- Axis Labels Overlay -->
+                <div class="absolute bottom-2 left-4 text-[10px] font-mono text-slate-500 uppercase tracking-widest pointer-events-none">
+                    Low Frequency &larr; Pitch Axis (X) &rarr; High Frequency
+                </div>
+                <div class="absolute top-16 right-3 text-[10px] font-mono text-slate-500 uppercase tracking-widest pointer-events-none rotate-90 origin-right">
+                    Volume Axis (Y) &rarr; Max
+                </div>
+
+                <!-- Touch instructions overlay (disappears on touch) -->
+                <div id="canvas-overlay-hint" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none transition-opacity duration-500">
+                    <div class="w-16 h-16 rounded-full bg-cyan-500/10 border border-cyan-400/40 flex items-center justify-center text-cyan-400 text-2xl animate-pulse mb-3">
+                        <i class="fa-solid fa-hand-pointer"></i>
+                    </div>
+                    <p class="text-sm font-medium text-slate-300">Click & Drag on Canvas to Play Theremin</p>
+                    <p class="text-xs text-slate-500 mt-1">Horizontal = Pitch | Vertical = Volume</p>
+                </div>
+            </div>
+
+            <!-- Visualizer Layout Selection Tabs -->
+            <div class="flex items-center justify-between gap-2 bg-slate-900/60 p-1.5 rounded-xl border border-slate-800 shrink-0 overflow-x-auto">
+                <div class="flex items-center gap-1">
+                    <button class="vis-tab-btn active px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-2 bg-cyan-500 text-slate-950 font-semibold shadow" data-target="vis-strip">
+                        <i class="fa-solid fa-grip-lines-vertical"></i> Continuous Chromatic Strip
+                    </button>
+                    <button class="vis-tab-btn px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800" data-target="vis-ring">
+                        <i class="fa-solid fa-circle-notch"></i> Note Ring / Radial Wheel
+                    </button>
+                </div>
+
+                <!-- Cents Deviation Bar Indicator -->
+                <div class="hidden md:flex items-center gap-2 px-3 py-1 bg-slate-950 rounded-lg border border-slate-800 text-xs font-mono">
+                    <span class="text-slate-500">Flat</span>
+                    <div class="w-24 h-2 bg-slate-800 rounded-full relative overflow-hidden">
+                        <div class="absolute inset-y-0 left-1/2 w-0.5 bg-slate-600"></div>
+                        <div id="cent-bar-fill" class="absolute inset-y-0 left-1/2 w-0 bg-cyan-400 transition-all duration-75"></div>
+                    </div>
+                    <span class="text-slate-500">Sharp</span>
+                </div>
+            </div>
+
+            <!-- Visualizer Container Panels -->
+            <div class="h-44 glass-panel rounded-2xl p-3 relative overflow-hidden shrink-0 border border-slate-800">
+                
+                <!-- 1. CHROMATIC STRIP PANEL -->
+                <div id="vis-strip" class="vis-panel w-full h-full flex flex-col justify-between">
+                    <div class="flex justify-between items-center text-xs text-slate-400 px-1 font-mono">
+                        <span id="strip-range-low">C4 (262Hz)</span>
+                        <span class="text-cyan-400 font-semibold">Linear Scale & Frequency Pitch Bar</span>
+                        <span id="strip-range-high">C7 (2093Hz)</span>
+                    </div>
+                    <!-- Keyboard Keys / Piano Overlay Visualization -->
+                    <div class="relative flex-1 my-2 bg-slate-950 rounded-xl overflow-hidden border border-slate-800 flex" id="chromatic-keys-container">
+                        <!-- Keys populated by JS -->
+                    </div>
+                    <!-- Pointer Indicator Track with Vibrato Ribbon Overlay -->
+                    <div class="relative h-5 bg-slate-900 rounded-md overflow-hidden">
+                        <div id="vibrato-ribbon" class="absolute top-0 bottom-0 bg-amber-400/30 border-l border-r border-amber-400/80 -translate-x-1/2 transition-all duration-75"></div>
+                        <div id="strip-cursor" class="absolute top-0 bottom-0 w-2 bg-cyan-400 rounded-full shadow-[0_0_12px_#06b6d4] -translate-x-1/2 transition-all duration-75"></div>
+                    </div>
+                </div>
+
+                <!-- 2. RADIAL RING PANEL -->
+                <div id="vis-ring" class="vis-panel w-full h-full hidden flex items-center justify-center gap-6">
+                    <div class="relative w-36 h-36 flex items-center justify-center">
+                        <canvas id="radial-canvas" width="150" height="150" class="w-full h-full"></canvas>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span id="ring-note-name" class="text-2xl font-bold font-mono text-cyan-400 leading-none">--</span>
+                            <span id="ring-octave" class="text-[10px] text-slate-400 font-mono mt-1">Octave -</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-col justify-center space-y-1.5 text-xs text-slate-300 font-mono">
+                        <div class="flex items-center gap-2">
+                            <div class="w-2.5 h-2.5 rounded-full bg-cyan-400"></div>
+                            <span>Angle = Chromatic Pitch Class (0-360°)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-2.5 h-2.5 rounded-full bg-amber-400"></div>
+                            <span>Highlighted Segments = Active Key Scale</span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 max-w-xs mt-1">
+                            Continuous rotation visualizes seamless pitch glides across active scale degrees.
+                        </p>
+                    </div>
+                </div>
+
+
+            </div>
+        </main>
+
+        <!-- Right Sidebar: Controls & Synth Parameters -->
+        <aside class="w-full lg:w-80 glass-panel border-t lg:border-t-0 lg:border-l border-slate-800 p-4 flex flex-col gap-5 overflow-y-auto shrink-0">
+            
+            <!-- NEW: Key & Custom Scale Management Section -->
+            <div>
+                <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-key text-emerald-400"></i> Key & Scale Manager
+                </h2>
+
+                <!-- Key Root & Scale Preset Selection -->
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                    <div>
+                        <label class="text-[11px] font-semibold text-slate-400 block mb-1">Root Key</label>
+                        <select id="select-root-key" class="w-full bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-cyan-300 px-2.5 py-2 outline-none focus:border-cyan-500">
+                            <option value="0">C</option>
+                            <option value="1">C# / Db</option>
+                            <option value="2">D</option>
+                            <option value="3">D# / Eb</option>
+                            <option value="4">E</option>
+                            <option value="5">F</option>
+                            <option value="6">F# / Gb</option>
+                            <option value="7">G</option>
+                            <option value="8">G# / Ab</option>
+                            <option value="9">A</option>
+                            <option value="10">A# / Bb</option>
+                            <option value="11">B</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-semibold text-slate-400 block mb-1">Scale Preset</label>
+                        <select id="select-scale-preset" class="w-full bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 px-2.5 py-2 outline-none focus:border-cyan-500">
+                            <option value="chromatic">Chromatic (All)</option>
+                            <option value="major" selected>Major (Ionian)</option>
+                            <option value="natural_minor">Natural Minor</option>
+                            <option value="harmonic_minor">Harmonic Minor</option>
+                            <option value="melodic_minor">Melodic Minor</option>
+                            <option value="pentatonic_major">Pentatonic Major</option>
+                            <option value="pentatonic_minor">Pentatonic Minor</option>
+                            <option value="blues">Blues Scale</option>
+                            <option value="dorian">Dorian Mode</option>
+                            <option value="phrygian">Phrygian Mode</option>
+                            <option value="lydian">Lydian Mode</option>
+                            <option value="mixolydian">Mixolydian Mode</option>
+                            <option value="custom">Custom Scale</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 12-Note Interactive Scale Matrix -->
+                <div class="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800 space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Active Notes Matrix</span>
+                        <div class="flex gap-1">
+                            <button id="btn-scale-all" class="px-2 py-0.5 text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-mono transition-colors">All</button>
+                            <button id="btn-scale-clear" class="px-2 py-0.5 text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-mono transition-colors">Clear</button>
+                        </div>
+                    </div>
+                    <div id="note-matrix" class="grid grid-cols-6 gap-1.5">
+                        <!-- 12 note toggle buttons dynamically rendered here -->
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-slate-800">
+
+            <div>
+                <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-cyan-400"></i> Pitch Tuning & Snap Modes
+                </h2>
+
+                <!-- Pitch Mode: Free vs Scale Snap vs Guided Magnet -->
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center">
+                        <label class="text-xs font-semibold text-slate-300">Quantization Mode</label>
+                        <span id="snap-status" class="text-[10px] px-2 py-0.5 rounded font-mono bg-slate-800 text-slate-400">Continuous (Free)</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-1 p-1 bg-slate-950 rounded-xl border border-slate-800 text-[11px]">
+                        <button id="btn-mode-free" class="py-1.5 rounded-lg font-medium transition-all bg-cyan-500 text-slate-950 font-semibold shadow text-center">
+                            Free
+                        </button>
+                        <button id="btn-mode-scale" class="py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition-all text-center">
+                            Scale Snap
+                        </button>
+                        <button id="btn-mode-magnet" class="py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition-all text-center">
+                            Magnetic
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Magnetic Pull Strength Slider (Only active in Magnetic mode) -->
+                <div id="magnet-strength-container" class="mt-3 space-y-1.5 opacity-40 pointer-events-none transition-opacity">
+                    <div class="flex justify-between text-xs font-semibold text-slate-300">
+                        <span>Magnetic Snap Strength</span>
+                        <span id="magnet-value" class="font-mono text-cyan-400">50%</span>
+                    </div>
+                    <input id="slider-magnet" type="range" min="10" max="100" value="50" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
+                </div>
+
+                <!-- Auto-Snap Delay (only active in Scale Snap & Magnetic modes) -->
+                <div id="snap-delay-container" class="mt-4 space-y-1.5 opacity-40 pointer-events-none transition-opacity">
+                    <div class="flex justify-between text-xs font-semibold text-slate-300">
+                        <span title="How long after you stop moving before the pitch corrects to the nearest scale note">Auto-Snap Delay</span>
+                        <span id="snap-delay-value" class="font-mono text-cyan-400">300 ms</span>
+                    </div>
+                    <input id="slider-snap-delay" type="range" min="0" max="1500" step="50" value="300" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
+                    <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+                        <span>0 ms (Instant)</span>
+                        <span>Slide freely &rarr; Lock</span>
+                    </div>
+                </div>
+
+                <!-- Portamento / Glide Speed -->
+                <div class="mt-4 space-y-1.5">
+                    <div class="flex justify-between text-xs font-semibold text-slate-300">
+                        <span>Glide Speed (Portamento)</span>
+                        <span id="glide-value" class="font-mono text-cyan-400">30 ms</span>
+                    </div>
+                    <input id="slider-glide" type="range" min="0" max="250" value="30" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
+                    <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+                        <span>Instant</span>
+                        <span>Smooth Portamento</span>
+                    </div>
+                </div>
+
+                <!-- Frequency Range Selector -->
+                <div class="mt-4 space-y-1.5">
+                    <div class="flex justify-between text-xs font-semibold text-slate-300">
+                        <span>Frequency Octave Range</span>
+                        <span id="range-value" class="font-mono text-cyan-400">C4 - C7</span>
+                    </div>
+                    <select id="select-range" class="w-full bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-300 px-3 py-2 outline-none focus:border-cyan-500">
+                        <option value="C2-C6">Bass to Soprano (C2 - C6: ~65 - 1046 Hz)</option>
+                        <option value="C3-C5">Standard Theremin (C3 - C5: ~130 - 523 Hz)</option>
+                        <option value="C4-C7" selected>High Register (C4 - C7: ~261 - 2093 Hz)</option>
+                    </select>
+                </div>
+            </div>
+
+            <hr class="border-slate-800">
+
+            <!-- Audio & Timbre Settings -->
+            <div>
+                <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-compact-disc text-indigo-400"></i> Timbre & Synthesis
+                </h2>
+
+                <!-- Waveform Selector -->
+                <div class="space-y-1.5">
+                    <label class="text-xs font-semibold text-slate-300">Oscillator Waveform</label>
+                    <div class="grid grid-cols-4 gap-1.5">
+                        <button class="wave-btn active p-2 rounded-xl border border-slate-800 bg-slate-950 text-cyan-400 flex flex-col items-center gap-1 hover:border-slate-700 transition-all text-xs" data-wave="sine">
+                            <i class="fa-solid fa-wave-square"></i> Sine
+                        </button>
+                        <button class="wave-btn p-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 flex flex-col items-center gap-1 hover:border-slate-700 transition-all text-xs" data-wave="triangle">
+                            <i class="fa-solid fa-play -rotate-90"></i> Tri
+                        </button>
+                        <button class="wave-btn p-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 flex flex-col items-center gap-1 hover:border-slate-700 transition-all text-xs" data-wave="sawtooth">
+                            <i class="fa-solid fa-chart-line"></i> Saw
+                        </button>
+                        <button class="wave-btn p-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 flex flex-col items-center gap-1 hover:border-slate-700 transition-all text-xs" data-wave="square">
+                            <i class="fa-solid fa-square-full"></i> Sq
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Comprehensive Vibrato Effect Controls -->
+                <div class="mt-4 space-y-3 bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-amber-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-circle-nodes"></i> Dynamic Vibrato LFO
+                        </span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="toggle-vibrato" class="sr-only peer">
+                            <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-400"></div>
+                        </label>
+                    </div>
+
+                    <div id="vibrato-controls" class="opacity-40 pointer-events-none transition-opacity space-y-3">
+                        <!-- Vibrato Speed / Rate -->
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-xs text-slate-300">
+                                <span>Vibrato Rate (Frequency)</span>
+                                <span id="vib-rate-val" class="font-mono text-amber-400">5.0 Hz</span>
+                            </div>
+                            <input id="slider-vib-rate" type="range" min="0.5" max="15" step="0.1" value="5" class="w-full h-1 bg-slate-800 rounded-lg appearance-none accent-amber-400">
+                            <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+                                <span>0.5 Hz (Slow)</span>
+                                <span>15 Hz (Rapid)</span>
+                            </div>
+                        </div>
+
+                        <!-- Vibrato Depth in Cents -->
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-xs text-slate-300">
+                                <span>Modulation Depth</span>
+                                <span id="vib-depth-val" class="font-mono text-amber-400">25 Cents</span>
+                            </div>
+                            <input id="slider-vib-depth" type="range" min="0" max="100" step="1" value="25" class="w-full h-1 bg-slate-800 rounded-lg appearance-none accent-amber-400">
+                            <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+                                <span>Subtle (5c)</span>
+                                <span>Wide Trill (100c)</span>
+                            </div>
+                        </div>
+
+                        <!-- LFO Shape Selector -->
+                        <div class="space-y-1">
+                            <label class="text-xs font-semibold text-slate-400">LFO Modulation Shape</label>
+                            <div class="grid grid-cols-3 gap-1">
+                                <button class="vib-shape-btn active py-1 rounded bg-slate-800 text-amber-400 border border-amber-400/40 text-[11px] font-mono" data-shape="sine">Sine</button>
+                                <button class="vib-shape-btn py-1 rounded bg-slate-900 text-slate-400 border border-slate-800 text-[11px] font-mono" data-shape="triangle">Triangle</button>
+                                <button class="vib-shape-btn py-1 rounded bg-slate-900 text-slate-400 border border-slate-800 text-[11px] font-mono" data-shape="square">Square</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-slate-800">
+
+            <!-- Visual Options -->
+            <div>
+                <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i> Visual Display Options
+                </h2>
+
+                <div class="space-y-2 text-xs text-slate-300">
+                    <label class="flex items-center gap-2.5 cursor-pointer">
+                        <input type="checkbox" id="toggle-trails" checked class="rounded bg-slate-900 border-slate-800 text-cyan-500 focus:ring-0">
+                        <span>Cursor Motion Glow Trails</span>
+                    </label>
+                    <label class="flex items-center gap-2.5 cursor-pointer">
+                        <input type="checkbox" id="toggle-grid" checked class="rounded bg-slate-900 border-slate-800 text-cyan-500 focus:ring-0">
+                        <span>Show Note Grid Overlay</span>
+                    </label>
+                    <label class="flex items-center gap-2.5 cursor-pointer">
+                        <input type="checkbox" id="toggle-piano-overlay" checked class="rounded bg-slate-900 border-slate-800 text-cyan-500 focus:ring-0">
+                        <span>Show Piano Keys on Touchpad</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="mt-auto pt-4 border-t border-slate-800/80 text-center">
+                <p class="text-[11px] text-slate-500">
+                    Visual Theremin &bull; Built with Web Audio API & HTML5 Canvas
+                </p>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Info Modal -->
+    <div id="help-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-panel max-w-md w-full rounded-2xl p-6 border border-slate-800 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-lg text-slate-100 flex items-center gap-2">
+                    <i class="fa-solid fa-circle-question text-cyan-400"></i> How to Play
+                </h3>
+                <button id="btn-close-modal" class="text-slate-400 hover:text-slate-100">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-3 text-sm text-slate-300 leading-relaxed">
+                <p>
+                    <strong class="text-cyan-400">Continuous Pitch Control:</strong> Moving your mouse or touch across the <strong>Horizontal (X) Axis</strong> continuously changes the audio frequency.
+                </p>
+                <p>
+                    <strong class="text-indigo-400">Volume Control:</strong> Moving vertically on the <strong>Vertical (Y) Axis</strong> controls the volume amplitude (up = louder, down = quieter).
+                </p>
+                <p>
+                    <strong class="text-amber-400">Pitch Visualizers:</strong>
+                </p>
+                <ul class="list-disc list-inside text-xs text-slate-400 space-y-1 pl-1">
+                    <li><strong>Continuous Strip:</strong> Linear view with piano semitone reference markers.</li>
+                    <li><strong>Radial Ring:</strong> Polar coordinate view displaying pitch class rotation.</li>
+                </ul>
+            </div>
+
+            <button id="btn-modal-ok" class="w-full py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold transition-all">
+                Got It!
+            </button>
+        </div>
+    </div>
+
+    <!-- APPLICATION LOGIC JavaScript -->
+    <script>
+        // Note Frequency Mapping Utilities
+        const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+        // Preset Scale Formulas (Interval offsets in semitones relative to root)
+        const SCALE_PRESETS = {
+            chromatic: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+            major: [0, 2, 4, 5, 7, 9, 11],
+            natural_minor: [0, 2, 3, 5, 7, 8, 10],
+            harmonic_minor: [0, 2, 3, 5, 7, 8, 11],
+            melodic_minor: [0, 2, 3, 5, 7, 9, 11],
+            pentatonic_major: [0, 2, 4, 7, 9],
+            pentatonic_minor: [0, 3, 5, 7, 10],
+            blues: [0, 3, 5, 6, 7, 10],
+            dorian: [0, 2, 3, 5, 7, 9, 10],
+            phrygian: [0, 1, 3, 5, 7, 8, 10],
+            lydian: [0, 2, 4, 6, 7, 9, 11],
+            mixolydian: [0, 2, 4, 5, 7, 9, 10]
+        };
+
+        function freqToMidi(freq) {
+            return 69 + 12 * Math.log2(freq / 440);
+        }
+
+        function midiToFreq(midi) {
+            return 440 * Math.pow(2, (midi - 69) / 12);
+        }
+
+        function getPitchDetails(freq) {
+            const midi = freqToMidi(freq);
+            const nearestMidi = Math.round(midi);
+            const cents = Math.round((midi - nearestMidi) * 100);
+            const noteIndex = (nearestMidi % 12 + 12) % 12;
+            const octave = Math.floor(nearestMidi / 12) - 1;
+            const noteName = NOTE_NAMES[noteIndex];
+            const exactNearestFreq = midiToFreq(nearestMidi);
+            return { midi, nearestMidi, noteName, octave, cents, exactNearestFreq, noteIndex };
+        }
+
+        // Global State
+        const state = {
+            audioCtx: null,
+            osc: null,
+            gainNode: null,
+            vibratoOsc: null,
+            vibratoGain: null,
+            isPlaying: false,
+            audioStarted: false,
+            
+            // Audio Params
+            // Default range = High Register (C4 - C7). Keep in sync with the #select-range default in the HTML.
+            minFreq: 261.63,  // C4
+            maxFreq: 2093.00, // C7
+            currentFreq: 523.25,
+            targetFreq: 523.25,
+            currentVol: 0.5,
+            targetVol: 0.5,
+            glideTimeMs: 30,
+            
+            // Key & Scale Manager
+            rootKey: 0, // C = 0
+            scalePreset: 'major',
+            activeNotes: [true, false, true, false, true, true, false, true, false, true, false, true], // C Major
+            quantizeMode: 'free', // 'free', 'scale', 'magnetic'
+            magnetStrength: 0.5,  // 0.1 to 1.0
+
+            // Auto-Snap Delay: how long after you stop moving before pitch corrects
+            snapDelayMs: 300,
+            lastCursorMoveTime: 0,
+            lastRawX: 0,
+            motionThresholdPx: 2,
+
+            waveform: 'sine',
+            
+            // Vibrato System
+            vibratoEnabled: false,
+            vibratoRate: 5.0,
+            vibratoDepthCents: 25,
+            vibratoShape: 'sine',
+            lfoPhase: 0,
+            
+            // Visual Options
+            showTrails: true,
+            showGrid: true,
+            showPianoOverlay: true,
+            activeTab: 'vis-strip',
+            
+            // Interaction State
+            isInteracting: false,
+            cursorX: 0.5,
+            cursorY: 0.5,
+            trailPoints: [],
+            
+        };
+
+        // Pitch Quantization Math Helpers for Scales & Magnetic Snapping
+        function findNearestScaleMidi(rawMidi) {
+            let bestMidi = Math.round(rawMidi);
+            let minDiff = Infinity;
+
+            for (let offset = -12; offset <= 12; offset++) {
+                const candidate = Math.round(rawMidi) + offset;
+                const noteIdx = (candidate % 12 + 12) % 12;
+
+                if (state.activeNotes[noteIdx]) {
+                    const diff = Math.abs(rawMidi - candidate);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        bestMidi = candidate;
+                    }
+                }
+            }
+            return bestMidi;
+        }
+
+        // True once the cursor has been still (horizontally) for the snap delay.
+        // A delay of 0 means the correction is always engaged (instant snap).
+        function isSnapEngaged() {
+            if (state.snapDelayMs <= 0) return true;
+            return (Date.now() - state.lastCursorMoveTime) >= state.snapDelayMs;
+        }
+
+        function calculateTargetFrequency(freq) {
+            if (state.quantizeMode === 'free') return freq; // Continuous free pitch
+
+            // While you are still moving, pitch stays free so you can slide between notes
+            if (!isSnapEngaged()) return freq;
+
+            const rawMidi = freqToMidi(freq);
+            const scaleMidi = findNearestScaleMidi(rawMidi);
+
+            if (state.quantizeMode === 'scale') {
+                // Hard snap to active scale notes
+                return midiToFreq(scaleMidi);
+            }
+
+            // Magnetic: pull pitch towards nearest scale degree based on magnetic strength
+            return midiToFreq(rawMidi + (scaleMidi - rawMidi) * state.magnetStrength);
+        }
+
+        // DOM Element Cache
+        const canvas = document.getElementById('theremin-canvas');
+        const ctx = canvas.getContext('2d');
+        const overlayHint = document.getElementById('canvas-overlay-hint');
+        const btnAudioToggle = document.getElementById('btn-audio-toggle');
+        const btnVibratoBypass = document.getElementById('btn-vibrato-bypass');
+        const vibratoBypassLabel = document.getElementById('vibrato-bypass-label');
+        
+        const displayFreq = document.getElementById('display-freq');
+        const displayVol = document.getElementById('display-vol');
+        const readoutNote = document.getElementById('readout-note');
+        const readoutOctave = document.getElementById('readout-octave');
+        const readoutCents = document.getElementById('readout-cents');
+        const centBarFill = document.getElementById('cent-bar-fill');
+        
+        const stripCursor = document.getElementById('strip-cursor');
+        const vibratoRibbon = document.getElementById('vibrato-ribbon');
+        const chromaticKeysContainer = document.getElementById('chromatic-keys-container');
+        
+        const radialCanvas = document.getElementById('radial-canvas');
+        const radialCtx = radialCanvas.getContext('2d');
+        const ringNoteName = document.getElementById('ring-note-name');
+        const ringOctave = document.getElementById('ring-octave');
+
+
+        // Note Matrix UI Generator
+        function renderNoteMatrixUI() {
+            const container = document.getElementById('note-matrix');
+            if (!container) return;
+            container.innerHTML = '';
+
+            for (let i = 0; i < 12; i++) {
+                const isRoot = i === state.rootKey;
+                const isActive = state.activeNotes[i];
+
+                const btn = document.createElement('button');
+                btn.className = `py-1 rounded text-[11px] font-mono font-bold transition-all border ${
+                    isActive 
+                        ? (isRoot 
+                            ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-[0_0_8px_rgba(251,191,36,0.5)]' 
+                            : 'bg-cyan-500 text-slate-950 border-cyan-400') 
+                        : 'bg-slate-900 text-slate-500 border-slate-800 hover:border-slate-700'
+                }`;
+                btn.textContent = NOTE_NAMES[i];
+                btn.title = isRoot ? 'Root Note' : NOTE_NAMES[i];
+
+                btn.addEventListener('click', () => {
+                    state.activeNotes[i] = !state.activeNotes[i];
+                    state.scalePreset = 'custom';
+                    document.getElementById('select-scale-preset').value = 'custom';
+                    renderNoteMatrixUI();
+                    buildChromaticStripKeys();
+                });
+
+                container.appendChild(btn);
+            }
+        }
+
+        function updateScaleFromPreset() {
+            if (state.scalePreset === 'custom') return;
+
+            const formula = SCALE_PRESETS[state.scalePreset] || SCALE_PRESETS.chromatic;
+            state.activeNotes = new Array(12).fill(false);
+
+            formula.forEach(offset => {
+                const noteIdx = (state.rootKey + offset) % 12;
+                state.activeNotes[noteIdx] = true;
+            });
+
+            renderNoteMatrixUI();
+            buildChromaticStripKeys();
+        }
+
+        // AUDIO INITIALIZATION & CONTROL
+        function initAudio() {
+            if (state.audioStarted) return;
+            
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            state.audioCtx = new AudioContext();
+
+            // Main Oscillator
+            state.osc = state.audioCtx.createOscillator();
+            state.osc.type = state.waveform;
+            state.osc.frequency.setValueAtTime(state.currentFreq, state.audioCtx.currentTime);
+
+            // Volume Gain Node
+            state.gainNode = state.audioCtx.createGain();
+            state.gainNode.gain.setValueAtTime(0, state.audioCtx.currentTime);
+
+            // Vibrato LFO Oscillator & Gain
+            state.vibratoOsc = state.audioCtx.createOscillator();
+            state.vibratoOsc.type = state.vibratoShape;
+            state.vibratoOsc.frequency.setValueAtTime(state.vibratoRate, state.audioCtx.currentTime);
+            
+            state.vibratoGain = state.audioCtx.createGain();
+            state.vibratoGain.gain.setValueAtTime(0, state.audioCtx.currentTime);
+
+            state.vibratoOsc.connect(state.vibratoGain);
+            state.vibratoGain.connect(state.osc.frequency);
+            
+            state.osc.connect(state.gainNode);
+            state.gainNode.connect(state.audioCtx.destination);
+
+            state.osc.start();
+            state.vibratoOsc.start();
+            state.audioStarted = true;
+        }
+
+        function setAudioState(active) {
+            if (!state.audioStarted && active) {
+                initAudio();
+            }
+
+            if (state.audioCtx && state.audioCtx.state === 'suspended' && active) {
+                state.audioCtx.resume();
+            }
+
+            state.isPlaying = active;
+
+            if (btnAudioToggle) {
+                if (state.audioStarted && state.isPlaying) {
+                    btnAudioToggle.className = "px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 bg-rose-500 hover:bg-rose-400 text-slate-950 transition-all shadow-lg shadow-rose-500/20 active:scale-95";
+                    btnAudioToggle.innerHTML = `<i class="fa-solid fa-volume-xmark text-base"></i><span>Mute Audio</span>`;
+                } else {
+                    btnAudioToggle.className = "px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 transition-all shadow-lg shadow-emerald-500/20 active:scale-95";
+                    btnAudioToggle.innerHTML = state.audioStarted
+                        ? `<i class="fa-solid fa-volume-high text-base"></i><span>Unmute Audio</span>`
+                        : `<i class="fa-solid fa-power-off text-base"></i><span>Activate Audio</span>`;
+                }
+            }
+        }
+
+        function updateVibratoUI() {
+            const toggleVibrato = document.getElementById('toggle-vibrato');
+            if (toggleVibrato) toggleVibrato.checked = state.vibratoEnabled;
+
+            if (state.vibratoEnabled) {
+                btnVibratoBypass.className = "px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 transition-all shadow-lg shadow-amber-500/20 active:scale-95";
+                vibratoBypassLabel.textContent = "Vibrato: ON";
+            } else {
+                btnVibratoBypass.className = "px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all active:scale-95";
+                vibratoBypassLabel.textContent = "Vibrato: OFF";
+            }
+        }
+
+        function updateAudioNodes() {
+            if (!state.audioStarted || !state.audioCtx) return;
+
+            const now = state.audioCtx.currentTime;
+            const glideSec = state.glideTimeMs / 1000;
+
+            // Calculate Target Pitch with Scale Quantization Mode
+            const freq = calculateTargetFrequency(state.targetFreq);
+
+            // Smooth frequency glide
+            state.osc.frequency.setTargetAtTime(freq, now, Math.max(0.005, glideSec));
+
+            // Gain / Volume glide
+            // Muted (isPlaying false) forces silence no matter what the cursor is doing
+            const targetGain = (state.isInteracting && state.isPlaying) ? state.targetVol : 0;
+            state.gainNode.gain.setTargetAtTime(targetGain, now, 0.015);
+
+            // Vibrato Settings
+            state.vibratoOsc.type = state.vibratoShape;
+            state.vibratoOsc.frequency.setTargetAtTime(state.vibratoRate, now, 0.05);
+
+            const depthRatio = Math.pow(2, state.vibratoDepthCents / 1200) - 1;
+            const targetVibratoHz = state.vibratoEnabled ? freq * depthRatio : 0;
+
+            state.vibratoGain.gain.setTargetAtTime(targetVibratoHz, now, 0.05);
+
+            state.currentFreq += (freq - state.currentFreq) * 0.2;
+            state.currentVol += (targetGain - state.currentVol) * 0.2;
+        }
+
+        // CHROMATIC STRIP PIANO BUILDER (With Key Highlighting)
+        function buildChromaticStripKeys() {
+            chromaticKeysContainer.innerHTML = '';
+            const minMidi = Math.round(freqToMidi(state.minFreq));
+            const maxMidi = Math.round(freqToMidi(state.maxFreq));
+
+            for (let m = minMidi; m <= maxMidi; m++) {
+                const noteIdx = (m % 12 + 12) % 12;
+                const isAccidental = [1, 3, 6, 8, 10].includes(noteIdx);
+                const isRoot = noteIdx === state.rootKey;
+                const inScale = state.activeNotes[noteIdx];
+                const noteName = NOTE_NAMES[noteIdx];
+                
+                const keyEl = document.createElement('div');
+                
+                let bgStyle = isAccidental ? 'bg-slate-900 text-slate-600 opacity-40' : 'bg-slate-800/20 text-slate-600 opacity-40';
+                if (inScale) {
+                    if (isRoot) {
+                        bgStyle = 'bg-amber-500/20 border-t-2 border-amber-400 text-amber-300 font-bold opacity-100 shadow-[inset_0_0_12px_rgba(251,191,36,0.15)]';
+                    } else if (isAccidental) {
+                        bgStyle = 'bg-slate-900 text-cyan-300 border-t border-cyan-500/40 opacity-100';
+                    } else {
+                        bgStyle = 'bg-slate-800/70 text-cyan-200 border-t border-cyan-400/40 opacity-100';
+                    }
+                }
+
+                keyEl.className = `flex-1 border-r border-slate-900/60 flex flex-col justify-end items-center pb-1 text-[9px] font-mono select-none transition-all ${bgStyle}`;
+
+                if (noteIdx === 0 || isRoot || m === minMidi || m === maxMidi) {
+                    const oct = Math.floor(m / 12) - 1;
+                    keyEl.innerHTML = `<span class="${isRoot ? 'text-amber-400 font-bold' : (inScale ? 'text-cyan-400' : 'text-slate-600')}">${noteName}${oct}</span>`;
+                }
+                chromaticKeysContainer.appendChild(keyEl);
+            }
+        }
+
+        // CANVAS RESIZING
+        function resizeCanvases() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+
+        }
+
+        window.addEventListener('resize', resizeCanvases);
+
+        // USER INPUT HANDLING
+        function handlePointerMove(e) {
+            const rect = canvas.getBoundingClientRect();
+            const rawX = e.clientX - rect.left;
+
+            // Restart the auto-snap timer only on real horizontal (pitch) movement.
+            // The anchor only advances once you pass the threshold, so slow drags still count,
+            // and vertical (volume) moves don't release a held note.
+            if (Math.abs(rawX - state.lastRawX) > state.motionThresholdPx) {
+                state.lastCursorMoveTime = Date.now();
+                state.lastRawX = rawX;
+            }
+
+            const x = Math.max(0, Math.min(1, rawX / rect.width));
+            const y = Math.max(0, Math.min(1, 1 - (e.clientY - rect.top) / rect.height));
+
+            state.cursorX = x;
+            state.cursorY = y;
+            state.isInteracting = true;
+
+            const minLog = Math.log2(state.minFreq);
+            const maxLog = Math.log2(state.maxFreq);
+            state.targetFreq = Math.pow(2, minLog + x * (maxLog - minLog));
+            state.targetVol = Math.pow(y, 1.5);
+
+            if (overlayHint) overlayHint.style.opacity = '0';
+
+            if (state.showTrails) {
+                state.trailPoints.push({
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top,
+                    alpha: 1.0,
+                    radius: 12 + y * 18
+                });
+            }
+        }
+
+        function handlePointerLeave() {
+            state.isInteracting = false;
+        }
+
+        canvas.addEventListener('pointerdown', (e) => {
+            canvas.setPointerCapture(e.pointerId);
+            // Only auto-start the very first time; after that Mute/Unmute belongs to the button
+            if (!state.audioStarted) setAudioState(true);
+
+            // A fresh press counts as movement, so the snap delay starts from the press
+            state.lastRawX = e.clientX - canvas.getBoundingClientRect().left;
+            state.lastCursorMoveTime = Date.now();
+
+            handlePointerMove(e);
+        });
+
+        canvas.addEventListener('pointermove', (e) => {
+            if (state.isInteracting) handlePointerMove(e);
+        });
+
+        canvas.addEventListener('pointerup', handlePointerLeave);
+        canvas.addEventListener('pointercancel', handlePointerLeave);
+
+        // Keyboard Shortcut for Quick Vibrato Bypass (Spacebar)
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT' && e.target.tagName !== 'BUTTON') {
+                e.preventDefault();
+                state.vibratoEnabled = !state.vibratoEnabled;
+                updateVibratoUI();
+            }
+        });
+
+        // PIANO OVERLAY: one key per semitone on the touchpad, drawn under the grid lines
+        function drawPianoOverlay() {
+            const minMidi = Math.round(freqToMidi(state.minFreq));
+            const maxMidi = Math.round(freqToMidi(state.maxFreq));
+            const logMin = Math.log2(state.minFreq);
+            const logSpan = Math.log2(state.maxFreq) - logMin;
+            const blackH = canvas.height * 0.6;
+
+            // Key under the cursor vs. note actually sounding (differ while sliding in snap modes)
+            const cursorMidi = Math.round(freqToMidi(state.targetFreq));
+            const soundingMidi = Math.round(freqToMidi(state.currentFreq));
+
+            ctx.textAlign = 'center';
+            ctx.font = '10px JetBrains Mono, monospace';
+
+            for (let m = minMidi; m <= maxMidi; m++) {
+                const xStart = Math.max(0, ((Math.log2(midiToFreq(m - 0.5)) - logMin) / logSpan) * canvas.width);
+                const xEnd = Math.min(canvas.width, ((Math.log2(midiToFreq(m + 0.5)) - logMin) / logSpan) * canvas.width);
+                const kw = xEnd - xStart;
+
+                const noteIdx = (m % 12 + 12) % 12;
+                const isAccidental = [1, 3, 6, 8, 10].includes(noteIdx);
+                const isRoot = noteIdx === state.rootKey;
+                const inScale = state.activeNotes[noteIdx];
+                const isSounding = state.isInteracting && soundingMidi === m;
+                const isUnderCursor = state.isInteracting && cursorMidi === m;
+                const keyH = isAccidental ? blackH : canvas.height;
+
+                // Key fill
+                if (isSounding) {
+                    ctx.fillStyle = isRoot ? 'rgba(251, 191, 36, 0.35)' : (inScale ? 'rgba(6, 182, 212, 0.35)' : 'rgba(148, 163, 184, 0.25)');
+                } else if (isUnderCursor) {
+                    ctx.fillStyle = 'rgba(148, 163, 184, 0.18)';
+                } else if (isAccidental) {
+                    ctx.fillStyle = inScale ? 'rgba(30, 41, 59, 0.85)' : 'rgba(2, 6, 23, 0.6)';
+                } else {
+                    ctx.fillStyle = inScale ? 'rgba(148, 163, 184, 0.14)' : 'rgba(148, 163, 184, 0.05)';
+                }
+                ctx.fillRect(xStart, 0, kw, keyH);
+
+                // Key border
+                if (isSounding) {
+                    ctx.strokeStyle = isRoot ? '#fbbf24' : '#06b6d4';
+                    ctx.lineWidth = 2;
+                } else if (inScale) {
+                    ctx.strokeStyle = isRoot ? 'rgba(251, 191, 36, 0.5)' : 'rgba(6, 182, 212, 0.3)';
+                    ctx.lineWidth = 1;
+                } else {
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+                    ctx.lineWidth = 1;
+                }
+                ctx.strokeRect(xStart, 0, kw, keyH);
+
+                // Key label (octave number shown on every C)
+                if (kw > 14) {
+                    ctx.fillStyle = isSounding ? '#ffffff' : (isRoot ? '#fbbf24' : (inScale ? '#38bdf8' : '#475569'));
+                    const octave = Math.floor(m / 12) - 1;
+                    const label = NOTE_NAMES[noteIdx] + (noteIdx === 0 ? octave : '');
+                    ctx.fillText(label, xStart + kw / 2, isAccidental ? blackH - 8 : canvas.height - 32);
+                }
+            }
+        }
+
+        // RENDERING LOOPS
+        function drawThereminCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Piano keys sit underneath so the grid lines stay visible on top
+            if (state.showPianoOverlay) drawPianoOverlay();
+
+            // Draw Frequency Grid Overlay with Active Key Highlights
+            if (state.showGrid) {
+                ctx.lineWidth = 1;
+                const minMidi = Math.round(freqToMidi(state.minFreq));
+                const maxMidi = Math.round(freqToMidi(state.maxFreq));
+                
+                for (let m = minMidi; m <= maxMidi; m++) {
+                    const f = midiToFreq(m);
+                    const logRatio = (Math.log2(f) - Math.log2(state.minFreq)) / (Math.log2(state.maxFreq) - Math.log2(state.minFreq));
+                    const gx = logRatio * canvas.width;
+
+                    const noteIdx = (m % 12 + 12) % 12;
+                    const isRoot = noteIdx === state.rootKey;
+                    const inScale = state.activeNotes[noteIdx];
+
+                    if (inScale) {
+                        ctx.strokeStyle = isRoot ? 'rgba(251, 191, 36, 0.4)' : 'rgba(6, 182, 212, 0.25)';
+                        ctx.lineWidth = isRoot ? 1.5 : 1;
+                    } else {
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
+                        ctx.lineWidth = 1;
+                    }
+
+                    ctx.beginPath();
+                    ctx.moveTo(gx, 0);
+                    ctx.lineTo(gx, canvas.height);
+                    ctx.stroke();
+                }
+
+                for (let v = 0.25; v < 1; v += 0.25) {
+                    const gy = canvas.height * (1 - v);
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+                    ctx.beginPath();
+                    ctx.moveTo(0, gy);
+                    ctx.lineTo(canvas.width, gy);
+                    ctx.stroke();
+                }
+            }
+
+            // Render Motion Trails
+            for (let i = state.trailPoints.length - 1; i >= 0; i--) {
+                const pt = state.trailPoints[i];
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, pt.radius * pt.alpha, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(6, 182, 212, ${pt.alpha * 0.35})`;
+                ctx.fill();
+
+                pt.alpha -= 0.03;
+                if (pt.alpha <= 0) state.trailPoints.splice(i, 1);
+            }
+
+            // Draw Active Pointer Target Glow
+            if (state.isInteracting) {
+                const px = state.cursorX * canvas.width;
+                const py = (1 - state.cursorY) * canvas.height;
+
+                // Snap tether: dashed line from the cursor to where the note will land.
+                // Cyan = still sliding free, amber/green = correction engaged.
+                const snapLocked = state.quantizeMode !== 'free' && isSnapEngaged();
+                if (state.quantizeMode !== 'free') {
+                    const logMin = Math.log2(state.minFreq);
+                    const logMax = Math.log2(state.maxFreq);
+                    const targetFreq = calculateTargetFrequency(state.targetFreq);
+                    const snapX = Math.max(0, Math.min(1, (Math.log2(targetFreq) - logMin) / (logMax - logMin))) * canvas.width;
+
+                    if (Math.abs(px - snapX) > 1) {
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.moveTo(px, py);
+                        ctx.lineTo(snapX, py);
+                        ctx.strokeStyle = snapLocked ? '#fbbf24' : 'rgba(6, 182, 212, 0.6)';
+                        ctx.lineWidth = 2;
+                        ctx.setLineDash([4, 4]);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+
+                        ctx.beginPath();
+                        ctx.arc(snapX, py, 5, 0, Math.PI * 2);
+                        ctx.fillStyle = snapLocked ? '#fbbf24' : '#06b6d4';
+                        ctx.fill();
+                        ctx.restore();
+                    }
+                }
+
+                const vibPulse = state.vibratoEnabled ? Math.sin(state.lfoPhase) * (state.vibratoDepthCents / 4) : 0;
+                const auraRadius = 45 + vibPulse;
+
+                const grad = ctx.createRadialGradient(px, py, 2, px, py, Math.max(10, auraRadius));
+                grad.addColorStop(0, state.vibratoEnabled ? 'rgba(251, 191, 36, 0.9)' : (snapLocked ? 'rgba(52, 211, 153, 0.9)' : 'rgba(6, 182, 212, 0.8)'));
+                grad.addColorStop(0.5, 'rgba(99, 102, 241, 0.3)');
+                grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+                ctx.beginPath();
+                ctx.arc(px, py, Math.max(10, auraRadius), 0, Math.PI * 2);
+                ctx.fillStyle = grad;
+                ctx.fill();
+
+                ctx.strokeStyle = state.vibratoEnabled ? 'rgba(251, 191, 36, 0.8)' : 'rgba(6, 182, 212, 0.6)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(px - 15, py); ctx.lineTo(px + 15, py);
+                ctx.moveTo(px, py - 15); ctx.lineTo(px, py + 15);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(px, py, 4, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+            }
+        }
+
+        // VISUALIZER 2: RADIAL RING DRAW WITH KEY HIGHLIGHTS
+        function drawRadialWheel(pitch) {
+            const w = radialCanvas.width;
+            const h = radialCanvas.height;
+            const cx = w / 2;
+            const cy = h / 2;
+            const baseOuterRadius = Math.min(w, h) / 2 - 8;
+
+            const vibPulse = state.vibratoEnabled ? Math.sin(state.lfoPhase) * (state.vibratoDepthCents / 15) : 0;
+            const outerRadius = baseOuterRadius + vibPulse;
+
+            radialCtx.clearRect(0, 0, w, h);
+
+            // Outer Base Ring
+            radialCtx.beginPath();
+            radialCtx.arc(cx, cy, Math.max(10, outerRadius), 0, Math.PI * 2);
+            radialCtx.strokeStyle = 'rgba(51, 65, 85, 0.4)';
+            radialCtx.lineWidth = 3;
+            radialCtx.stroke();
+
+            // Render 12 Chromatic Segments with Scale Color Indicators
+            for (let i = 0; i < 12; i++) {
+                const isRoot = i === state.rootKey;
+                const inScale = state.activeNotes[i];
+                
+                const startAngle = (i / 12) * Math.PI * 2 - Math.PI / 2 - (Math.PI / 24);
+                const endAngle = startAngle + (Math.PI / 12);
+
+                if (inScale) {
+                    radialCtx.beginPath();
+                    radialCtx.arc(cx, cy, outerRadius, startAngle, endAngle);
+                    radialCtx.strokeStyle = isRoot ? '#fbbf24' : '#06b6d4';
+                    radialCtx.lineWidth = isRoot ? 5 : 4;
+                    radialCtx.stroke();
+                }
+
+                // Tick lines
+                const angle = (i / 12) * Math.PI * 2 - Math.PI / 2;
+                const tx1 = cx + Math.cos(angle) * (baseOuterRadius - 4);
+                const ty1 = cy + Math.sin(angle) * (baseOuterRadius - 4);
+                const tx2 = cx + Math.cos(angle) * (baseOuterRadius + 4);
+                const ty2 = cy + Math.sin(angle) * (baseOuterRadius + 4);
+
+                radialCtx.beginPath();
+                radialCtx.moveTo(tx1, ty1);
+                radialCtx.lineTo(tx2, ty2);
+                radialCtx.strokeStyle = inScale ? (isRoot ? '#fbbf24' : '#06b6d4') : '#334155';
+                radialCtx.lineWidth = isRoot ? 2.5 : (inScale ? 1.5 : 1);
+                radialCtx.stroke();
+            }
+
+            // Calculated pitch location
+            const semitoneProgress = (pitch.midi % 12 + 12) % 12;
+            const angle = (semitoneProgress / 12) * Math.PI * 2 - Math.PI / 2;
+            
+            const octNorm = Math.max(0, Math.min(1, (pitch.midi - 36) / 48));
+            const pointerR = baseOuterRadius * (0.4 + octNorm * 0.55);
+
+            const px = cx + Math.cos(angle) * pointerR;
+            const py = cy + Math.sin(angle) * pointerR;
+
+            // Spoke line
+            radialCtx.beginPath();
+            radialCtx.moveTo(cx, cy);
+            radialCtx.lineTo(px, py);
+            radialCtx.strokeStyle = state.vibratoEnabled ? 'rgba(251, 191, 36, 0.7)' : 'rgba(6, 182, 212, 0.5)';
+            radialCtx.lineWidth = 2;
+            radialCtx.stroke();
+
+            // Pointer Dot
+            radialCtx.beginPath();
+            radialCtx.arc(px, py, 6, 0, Math.PI * 2);
+            radialCtx.fillStyle = state.vibratoEnabled ? '#fbbf24' : '#06b6d4';
+            radialCtx.shadowColor = state.vibratoEnabled ? '#fbbf24' : '#06b6d4';
+            radialCtx.shadowBlur = 10;
+            radialCtx.fill();
+            radialCtx.shadowBlur = 0;
+        }
+
+        // MAIN UPDATE & RENDER LOOP
+        function masterLoop() {
+            updateAudioNodes();
+
+            state.lfoPhase += (state.vibratoRate * Math.PI * 2) / 60;
+
+            // Readouts follow the base pitch (your cursor, plus any snap) and NOT the vibrato LFO,
+            // so the note, cents and cent bar stay steady while vibrato is on.
+            const baseFreq = state.currentFreq;
+            const pitch = getPitchDetails(baseFreq);
+
+            // Update UI Numerical Displays
+            displayFreq.textContent = `${baseFreq.toFixed(1)} Hz`;
+            displayVol.textContent = `${Math.round(state.currentVol * 100)}%`;
+            readoutNote.textContent = pitch.noteName;
+            readoutOctave.textContent = `Octave ${pitch.octave}`;
+            
+            const centsText = pitch.cents >= 0 ? `+${pitch.cents}` : `${pitch.cents}`;
+            readoutCents.textContent = `${centsText} cents`;
+
+            // Cent Deviation Fill Bar
+            const centRatio = Math.max(-50, Math.min(50, pitch.cents)) / 50;
+            if (centRatio >= 0) {
+                centBarFill.style.left = '50%';
+                centBarFill.style.width = `${centRatio * 50}%`;
+                centBarFill.className = `absolute inset-y-0 ${state.vibratoEnabled ? 'bg-amber-400' : 'bg-cyan-400'} transition-all duration-75`;
+            } else {
+                centBarFill.style.left = `${50 + centRatio * 50}%`;
+                centBarFill.style.width = `${Math.abs(centRatio) * 50}%`;
+                centBarFill.className = `absolute inset-y-0 ${state.vibratoEnabled ? 'bg-amber-400' : 'bg-sky-400'} transition-all duration-75`;
+            }
+
+            // Update Chromatic Strip Cursor & Ribbon
+            const logMin = Math.log2(state.minFreq);
+            const logMax = Math.log2(state.maxFreq);
+            const freqRatio = Math.max(0, Math.min(1, (Math.log2(baseFreq) - logMin) / (logMax - logMin)));
+            stripCursor.style.left = `${freqRatio * 100}%`;
+
+            if (state.vibratoEnabled) {
+                const ribbonWidthCents = (state.vibratoDepthCents / (1200 * (logMax - logMin))) * 100 * 2;
+                vibratoRibbon.style.display = 'block';
+                vibratoRibbon.style.left = `${freqRatio * 100}%`;
+                vibratoRibbon.style.width = `${Math.max(0.5, ribbonWidthCents)}%`;
+            } else {
+                vibratoRibbon.style.display = 'none';
+            }
+
+            // Update Radial Ring Info
+            ringNoteName.textContent = pitch.noteName;
+            ringOctave.textContent = `Octave ${pitch.octave}`;
+
+            // Render Canvases
+            drawThereminCanvas();
+            drawRadialWheel(pitch);
+
+            requestAnimationFrame(masterLoop);
+        }
+
+        // INTERFACE BINDINGS & CONTROLS
+        function setupUIEventListeners() {
+            btnAudioToggle.addEventListener('click', () => {
+                setAudioState(!state.isPlaying);
+            });
+
+            btnVibratoBypass.addEventListener('click', () => {
+                state.vibratoEnabled = !state.vibratoEnabled;
+                updateVibratoUI();
+            });
+
+            // Key & Scale Manager Select Handlers
+            const selectRootKey = document.getElementById('select-root-key');
+            const selectScalePreset = document.getElementById('select-scale-preset');
+            const btnScaleAll = document.getElementById('btn-scale-all');
+            const btnScaleClear = document.getElementById('btn-scale-clear');
+
+            selectRootKey.addEventListener('change', (e) => {
+                state.rootKey = parseInt(e.target.value);
+                updateScaleFromPreset();
+            });
+
+            selectScalePreset.addEventListener('change', (e) => {
+                state.scalePreset = e.target.value;
+                updateScaleFromPreset();
+            });
+
+            btnScaleAll.addEventListener('click', () => {
+                state.activeNotes = new Array(12).fill(true);
+                state.scalePreset = 'chromatic';
+                selectScalePreset.value = 'chromatic';
+                renderNoteMatrixUI();
+                buildChromaticStripKeys();
+            });
+
+            btnScaleClear.addEventListener('click', () => {
+                state.activeNotes = new Array(12).fill(false);
+                state.scalePreset = 'custom';
+                selectScalePreset.value = 'custom';
+                renderNoteMatrixUI();
+                buildChromaticStripKeys();
+            });
+
+            // Quantization Mode Buttons & Magnetic Slider
+            const btnModeFree = document.getElementById('btn-mode-free');
+            const btnModeScale = document.getElementById('btn-mode-scale');
+            const btnModeMagnet = document.getElementById('btn-mode-magnet');
+            const snapStatus = document.getElementById('snap-status');
+            const magnetContainer = document.getElementById('magnet-strength-container');
+            const snapDelayContainer = document.getElementById('snap-delay-container');
+            const sliderMagnet = document.getElementById('slider-magnet');
+            const magnetValue = document.getElementById('magnet-value');
+
+            function updateQuantizeModeUI() {
+                btnModeFree.className = 'py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200 text-center';
+                btnModeScale.className = 'py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition-all text-center';
+                btnModeMagnet.className = 'py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition-all text-center';
+
+                magnetContainer.style.opacity = '0.4';
+                magnetContainer.style.pointerEvents = 'none';
+
+                // Snap delay only matters when a snap mode is active
+                const snapActive = state.quantizeMode !== 'free';
+                snapDelayContainer.style.opacity = snapActive ? '1' : '0.4';
+                snapDelayContainer.style.pointerEvents = snapActive ? 'auto' : 'none';
+
+                if (state.quantizeMode === 'free') {
+                    btnModeFree.className = 'py-1.5 rounded-lg font-medium transition-all bg-cyan-500 text-slate-950 font-semibold shadow text-center';
+                    snapStatus.textContent = 'Continuous (Free)';
+                    snapStatus.className = 'text-[10px] px-2 py-0.5 rounded font-mono bg-slate-800 text-slate-400';
+                } else if (state.quantizeMode === 'scale') {
+                    btnModeScale.className = 'py-1.5 rounded-lg font-medium transition-all bg-cyan-500 text-slate-950 font-semibold shadow text-center';
+                    snapStatus.textContent = 'Scale Snap';
+                    snapStatus.className = 'text-[10px] px-2 py-0.5 rounded font-mono bg-emerald-950 border border-emerald-800 text-emerald-400';
+                } else if (state.quantizeMode === 'magnetic') {
+                    btnModeMagnet.className = 'py-1.5 rounded-lg font-medium transition-all bg-cyan-500 text-slate-950 font-semibold shadow text-center';
+                    snapStatus.textContent = 'Magnetic Guide';
+                    snapStatus.className = 'text-[10px] px-2 py-0.5 rounded font-mono bg-indigo-950 border border-indigo-800 text-indigo-400';
+                    magnetContainer.style.opacity = '1';
+                    magnetContainer.style.pointerEvents = 'auto';
+                }
+            }
+
+            btnModeFree.addEventListener('click', () => { state.quantizeMode = 'free'; updateQuantizeModeUI(); });
+            btnModeScale.addEventListener('click', () => { state.quantizeMode = 'scale'; updateQuantizeModeUI(); });
+            btnModeMagnet.addEventListener('click', () => { state.quantizeMode = 'magnetic'; updateQuantizeModeUI(); });
+
+            sliderMagnet.addEventListener('input', (e) => {
+                state.magnetStrength = parseInt(e.target.value) / 100;
+                magnetValue.textContent = `${e.target.value}%`;
+            });
+
+            // Tab Switching
+            const visTabs = document.querySelectorAll('.vis-tab-btn');
+            const visPanels = document.querySelectorAll('.vis-panel');
+
+            visTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const targetId = tab.getAttribute('data-target');
+                    state.activeTab = targetId;
+
+                    visTabs.forEach(t => {
+                        t.className = 'vis-tab-btn px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800';
+                    });
+                    tab.className = 'vis-tab-btn active px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-2 bg-cyan-500 text-slate-950 font-semibold shadow';
+
+                    visPanels.forEach(panel => {
+                        panel.classList.toggle('hidden', panel.id !== targetId);
+                    });
+                });
+            });
+
+            // Glide Speed Slider
+            const sliderGlide = document.getElementById('slider-glide');
+            const glideValue = document.getElementById('glide-value');
+            sliderGlide.addEventListener('input', (e) => {
+                state.glideTimeMs = parseInt(e.target.value);
+                glideValue.textContent = `${state.glideTimeMs} ms`;
+            });
+
+            // Frequency Range Selector
+            const selectRange = document.getElementById('select-range');
+            const rangeValue = document.getElementById('range-value');
+            const stripRangeLow = document.getElementById('strip-range-low');
+            const stripRangeHigh = document.getElementById('strip-range-high');
+            const RANGE_PRESETS = {
+                'C2-C6': { min: 65.41,  max: 1046.50, label: 'C2 - C6', low: 'C2 (65Hz)',  high: 'C6 (1046Hz)' },
+                'C3-C5': { min: 130.81, max: 523.25,  label: 'C3 - C5', low: 'C3 (131Hz)', high: 'C5 (523Hz)' },
+                'C4-C7': { min: 261.63, max: 2093.00, label: 'C4 - C7', low: 'C4 (262Hz)', high: 'C7 (2093Hz)' }
+            };
+            selectRange.addEventListener('change', (e) => {
+                const preset = RANGE_PRESETS[e.target.value];
+                if (!preset) return;
+                state.minFreq = preset.min;
+                state.maxFreq = preset.max;
+                rangeValue.textContent = preset.label;
+                stripRangeLow.textContent = preset.low;
+                stripRangeHigh.textContent = preset.high;
+                buildChromaticStripKeys();
+            });
+
+            // Waveform Selector Buttons
+            const waveBtns = document.querySelectorAll('.wave-btn');
+            waveBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    waveBtns.forEach(b => {
+                        b.className = 'wave-btn p-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 flex flex-col items-center gap-1 hover:border-slate-700 transition-all text-xs';
+                    });
+                    btn.className = 'wave-btn active p-2 rounded-xl border border-slate-800 bg-slate-950 text-cyan-400 flex flex-col items-center gap-1 hover:border-slate-700 transition-all text-xs';
+                    state.waveform = btn.getAttribute('data-wave');
+                    if (state.osc) state.osc.type = state.waveform;
+                });
+            });
+
+            // Vibrato Controls & Sliders
+            const toggleVibrato = document.getElementById('toggle-vibrato');
+            const vibratoControls = document.getElementById('vibrato-controls');
+            const sliderVibRate = document.getElementById('slider-vib-rate');
+            const vibRateVal = document.getElementById('vib-rate-val');
+            const sliderVibDepth = document.getElementById('slider-vib-depth');
+            const vibDepthVal = document.getElementById('vib-depth-val');
+            const vibShapeBtns = document.querySelectorAll('.vib-shape-btn');
+
+            toggleVibrato.addEventListener('change', (e) => {
+                state.vibratoEnabled = e.target.checked;
+                vibratoControls.style.opacity = state.vibratoEnabled ? '1' : '0.4';
+                vibratoControls.style.pointerEvents = state.vibratoEnabled ? 'auto' : 'none';
+                updateVibratoUI();
+            });
+
+            sliderVibRate.addEventListener('input', (e) => {
+                state.vibratoRate = parseFloat(e.target.value);
+                vibRateVal.textContent = `${state.vibratoRate.toFixed(1)} Hz`;
+            });
+
+            sliderVibDepth.addEventListener('input', (e) => {
+                state.vibratoDepthCents = parseInt(e.target.value);
+                vibDepthVal.textContent = `${state.vibratoDepthCents} Cents`;
+            });
+
+            vibShapeBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    vibShapeBtns.forEach(b => {
+                        b.className = 'vib-shape-btn py-1 rounded bg-slate-900 text-slate-400 border border-slate-800 text-[11px] font-mono';
+                    });
+                    btn.className = 'vib-shape-btn active py-1 rounded bg-slate-800 text-amber-400 border border-amber-400/40 text-[11px] font-mono';
+                    state.vibratoShape = btn.getAttribute('data-shape');
+                });
+            });
+
+            // Visual Checkboxes
+            document.getElementById('toggle-trails').addEventListener('change', (e) => {
+                state.showTrails = e.target.checked;
+            });
+            document.getElementById('toggle-grid').addEventListener('change', (e) => {
+                state.showGrid = e.target.checked;
+            });
+            document.getElementById('toggle-piano-overlay').addEventListener('change', (e) => {
+                state.showPianoOverlay = e.target.checked;
+            });
+
+            // Auto-Snap Delay Slider
+            const sliderSnapDelay = document.getElementById('slider-snap-delay');
+            const snapDelayValue = document.getElementById('snap-delay-value');
+            sliderSnapDelay.addEventListener('input', (e) => {
+                state.snapDelayMs = parseInt(e.target.value);
+                snapDelayValue.textContent = `${state.snapDelayMs} ms`;
+            });
+
+            // Help Modal handlers
+            const helpModal = document.getElementById('help-modal');
+            document.getElementById('btn-help').addEventListener('click', () => helpModal.classList.remove('hidden'));
+            document.getElementById('btn-close-modal').addEventListener('click', () => helpModal.classList.add('hidden'));
+            document.getElementById('btn-modal-ok').addEventListener('click', () => helpModal.classList.add('hidden'));
+        }
+
+        // INITIALIZATION
+        window.addEventListener('load', () => {
+            resizeCanvases();
+            updateScaleFromPreset();
+            renderNoteMatrixUI();
+            buildChromaticStripKeys();
+            setupUIEventListeners();
+            requestAnimationFrame(masterLoop);
+        });
+    </script>
+</body>
+</html>
