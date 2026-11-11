@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Visual Theremin Studio</title>
+    <title>Visual Theremin Prototype</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -20,16 +20,35 @@
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
                         mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        ether: {
+                            50: '#f0fdfa',
+                            500: '#14b8a6',
+                            900: '#134e4a',
+                            glow: '#06b6d4'
+                        }
                     }
                 }
             }
         }
     </script>
     <style>
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #0f172a; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-        .theremin-canvas { cursor: crosshair; touch-action: none; }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        .theremin-canvas {
+            cursor: crosshair;
+            touch-action: none;
+        }
         .glass-panel {
             background: rgba(15, 23, 42, 0.85);
             backdrop-filter: blur(12px);
@@ -37,69 +56,71 @@
         }
     </style>
 </head>
-<body class="h-full font-sans antialiased flex flex-col overflow-hidden selection:bg-cyan-500 selection:text-slate-950">
+<body class="h-full font-sans antialiased flex flex-col overflow-x-hidden selection:bg-cyan-500 selection:text-slate-950">
 
     <!-- Top Navigation Header -->
-    <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur px-3 py-2.5 flex items-center justify-between gap-3 z-30 shrink-0">
-        <div class="flex items-center space-x-2.5">
+    <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur px-4 py-3 flex items-center justify-between gap-3 z-30 shrink-0">
+        <div class="flex items-center space-x-3">
             <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-500 flex items-center justify-center text-slate-950 font-bold text-lg shadow-lg shadow-cyan-500/20">
                 <i class="fa-solid fa-wave-square"></i>
             </div>
             <div>
-                <h1 class="text-sm sm:text-base font-bold tracking-tight bg-gradient-to-r from-cyan-400 via-sky-200 to-indigo-300 bg-clip-text text-transparent">
+                <h1 class="text-base sm:text-lg font-bold tracking-tight bg-gradient-to-r from-cyan-400 via-sky-200 to-indigo-300 bg-clip-text text-transparent">
                     AetherTheremin <span class="hidden sm:inline text-xs px-2 py-0.5 rounded-full bg-cyan-950 border border-cyan-800 text-cyan-400 font-mono">Visual Lab</span>
                 </h1>
-                <p class="text-[10px] sm:text-xs text-slate-400">Continuous Pitch & Visualizer</p>
+                <p class="text-[11px] text-slate-400 hidden sm:block">Continuous Pitch Controller & Visualizers</p>
             </div>
         </div>
 
+        <!-- Audio Start/Stop & Quick Controls -->
         <div class="flex items-center gap-2">
-            <button id="btn-audio-toggle" class="px-3.5 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 transition-all shadow-lg shadow-emerald-500/20 active:scale-95">
-                <i class="fa-solid fa-power-off"></i>
-                <span id="audio-toggle-text">Activate</span>
+            <button id="btn-audio-toggle" class="px-3.5 sm:px-5 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 transition-all shadow-lg shadow-emerald-500/20 active:scale-95">
+                <i class="fa-solid fa-power-off text-sm"></i>
+                <span>Activate Audio</span>
             </button>
-            <button id="btn-vibrato-bypass" class="px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all active:scale-95" title="Toggle Vibrato">
+            <button id="btn-vibrato-bypass" class="hidden sm:flex px-3.5 py-2 rounded-xl font-semibold text-xs sm:text-sm items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all active:scale-95">
                 <i class="fa-solid fa-bolt text-amber-400"></i>
-                <span id="vibrato-bypass-label" class="hidden sm:inline">Vibrato: OFF</span>
+                <span id="vibrato-bypass-label">Vibrato: OFF</span>
+                <span class="text-[10px] font-mono text-slate-400 border border-slate-600 px-1.5 py-0.5 rounded">SPACE</span>
             </button>
-            <button id="btn-toggle-settings" class="lg:hidden px-3 py-2 rounded-xl font-semibold text-xs bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 flex items-center gap-1.5 active:scale-95">
-                <i class="fa-solid fa-sliders"></i>
+            <button id="btn-toggle-drawer" class="lg:hidden px-3.5 py-2 rounded-xl font-semibold text-xs flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 transition-all active:scale-95">
+                <i class="fa-solid fa-sliders text-sm"></i>
                 <span>Settings</span>
             </button>
-            <button id="btn-help" class="w-9 h-9 rounded-xl glass-panel hover:bg-slate-800 hidden sm:flex items-center justify-center text-slate-400 hover:text-cyan-400 transition-colors">
+            <button id="btn-help" class="w-9 h-9 rounded-xl glass-panel hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-cyan-400 transition-colors">
                 <i class="fa-solid fa-circle-info text-base"></i>
             </button>
         </div>
     </header>
 
     <!-- Main Workspace -->
-    <div class="flex-1 flex flex-row overflow-hidden relative">
+    <div class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
         
-        <!-- Left/Main: Interactive Canvas & Overlay Visualizers -->
-        <main class="flex-1 flex flex-col p-2.5 sm:p-4 gap-2.5 sm:gap-4 overflow-y-auto relative min-h-0">
+        <!-- Left: Interactive Canvas & Overlay Visualizers -->
+        <main class="flex-1 flex flex-col p-3 sm:p-4 gap-3 overflow-y-auto relative min-h-[400px]">
             
             <!-- Theremin Touchpad Canvas Container -->
-            <div class="flex-1 relative rounded-2xl overflow-hidden glass-panel flex flex-col shadow-2xl border border-slate-800 min-h-[220px]">
+            <div class="flex-1 relative rounded-2xl overflow-hidden glass-panel flex flex-col shadow-2xl border border-slate-800 min-h-[260px]">
                 
                 <!-- Canvas Bar Info Header -->
                 <div class="absolute top-2.5 left-3 right-3 flex items-center justify-between pointer-events-none z-10 gap-2">
-                    <div class="flex items-center gap-1.5 bg-slate-950/75 backdrop-blur px-2.5 py-1 rounded-lg border border-slate-800 text-[11px] sm:text-xs font-mono text-slate-300">
+                    <div class="flex items-center gap-1.5 bg-slate-950/80 backdrop-blur px-2.5 py-1 rounded-lg border border-slate-800 text-[11px] font-mono text-slate-300">
                         <span class="text-cyan-400">Pitch:</span>
-                        <span id="display-freq">0Hz</span>
+                        <span id="display-freq">0.0 Hz</span>
                         <span class="text-slate-600">|</span>
                         <span class="text-indigo-400">Vol:</span>
                         <span id="display-vol">0%</span>
                     </div>
 
                     <!-- Note Readout Box -->
-                    <div id="readout-card" class="bg-slate-950/85 backdrop-blur px-3 py-1 rounded-xl border border-cyan-500/30 flex items-center gap-2.5 shadow-lg transition-all">
+                    <div id="readout-card" class="bg-slate-950/90 backdrop-blur px-3 py-1 rounded-xl border border-cyan-500/30 flex items-center gap-2 shadow-lg">
                         <div class="text-right">
                             <div id="readout-note" class="text-lg sm:text-xl font-bold font-mono text-cyan-300 leading-none">--</div>
                             <div id="readout-octave" class="text-[9px] text-slate-400 uppercase tracking-wider font-semibold">Note</div>
                         </div>
                         <div class="w-px h-6 bg-slate-800"></div>
                         <div>
-                            <div id="readout-cents" class="text-xs sm:text-sm font-mono font-bold text-amber-400 leading-none">0c</div>
+                            <div id="readout-cents" class="text-xs sm:text-sm font-mono font-bold text-amber-400 leading-none">0 cents</div>
                             <div class="text-[9px] text-slate-400 uppercase tracking-wider font-semibold">Dev</div>
                         </div>
                     </div>
@@ -113,24 +134,26 @@
                     <div class="w-12 h-12 rounded-full bg-cyan-500/10 border border-cyan-400/40 flex items-center justify-center text-cyan-400 text-xl animate-pulse mb-2">
                         <i class="fa-solid fa-hand-pointer"></i>
                     </div>
-                    <p class="text-xs sm:text-sm font-medium text-slate-300">Touch & Drag to Play Theremin</p>
+                    <p class="text-xs sm:text-sm font-medium text-slate-300 text-center px-4">Touch & Drag to Play Theremin</p>
+                    <p class="text-[10px] text-slate-500 mt-0.5">Horizontal = Pitch | Vertical = Volume</p>
                 </div>
             </div>
 
             <!-- Visualizer Layout Selection Tabs -->
-            <div class="flex items-center justify-between gap-2 bg-slate-900/60 p-1 rounded-xl border border-slate-800 shrink-0 overflow-x-auto">
-                <div class="flex items-center gap-1">
-                    <button class="vis-tab-btn active px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 bg-cyan-500 text-slate-950 font-semibold shadow" data-target="vis-strip">
-                        <i class="fa-solid fa-grip-lines-vertical"></i> Strip
+            <div class="flex items-center justify-between gap-2 bg-slate-900/60 p-1.5 rounded-xl border border-slate-800 shrink-0 overflow-x-auto">
+                <div class="flex items-center gap-1 w-full sm:w-auto">
+                    <button class="vis-tab-btn active flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 bg-cyan-500 text-slate-950 font-semibold shadow" data-target="vis-strip">
+                        <i class="fa-solid fa-grip-lines-vertical"></i> Chromatic Strip
                     </button>
-                    <button class="vis-tab-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800" data-target="vis-ring">
+                    <button class="vis-tab-btn flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800" data-target="vis-ring">
                         <i class="fa-solid fa-circle-notch"></i> Radial Wheel
                     </button>
                 </div>
 
+                <!-- Cents Deviation Bar Indicator -->
                 <div class="hidden md:flex items-center gap-2 px-3 py-1 bg-slate-950 rounded-lg border border-slate-800 text-xs font-mono">
                     <span class="text-slate-500">Flat</span>
-                    <div class="w-20 h-2 bg-slate-800 rounded-full relative overflow-hidden">
+                    <div class="w-24 h-2 bg-slate-800 rounded-full relative overflow-hidden">
                         <div class="absolute inset-y-0 left-1/2 w-0.5 bg-slate-600"></div>
                         <div id="cent-bar-fill" class="absolute inset-y-0 left-1/2 w-0 bg-cyan-400 transition-all duration-75"></div>
                     </div>
@@ -139,39 +162,41 @@
             </div>
 
             <!-- Visualizer Container Panels -->
-            <div class="h-28 sm:h-36 glass-panel rounded-2xl p-2.5 relative overflow-hidden shrink-0 border border-slate-800">
+            <div class="h-32 sm:h-40 glass-panel rounded-2xl p-2.5 relative overflow-hidden shrink-0 border border-slate-800">
                 
                 <!-- 1. CHROMATIC STRIP PANEL -->
                 <div id="vis-strip" class="vis-panel w-full h-full flex flex-col justify-between">
-                    <div class="flex justify-between items-center text-[11px] text-slate-400 px-1 font-mono">
+                    <div class="flex justify-between items-center text-[10px] sm:text-xs text-slate-400 px-1 font-mono">
                         <span id="strip-range-low">C4 (262Hz)</span>
-                        <span class="text-cyan-400 font-semibold hidden sm:inline">Linear Scale & Frequency Pitch Bar</span>
+                        <span class="text-cyan-400 font-semibold hidden sm:inline">Linear Scale Pitch Bar</span>
                         <span id="strip-range-high">C7 (2093Hz)</span>
                     </div>
+                    <!-- Keyboard Keys / Piano Overlay Visualization -->
                     <div class="relative flex-1 my-1.5 bg-slate-950 rounded-xl overflow-hidden border border-slate-800 flex" id="chromatic-keys-container"></div>
-                    <div class="relative h-4 bg-slate-900 rounded-md overflow-hidden">
+                    <!-- Pointer Indicator Track with Vibrato Ribbon Overlay -->
+                    <div class="relative h-4 sm:h-5 bg-slate-900 rounded-md overflow-hidden">
                         <div id="vibrato-ribbon" class="absolute top-0 bottom-0 bg-amber-400/30 border-l border-r border-amber-400/80 -translate-x-1/2 transition-all duration-75"></div>
                         <div id="strip-cursor" class="absolute top-0 bottom-0 w-2 bg-cyan-400 rounded-full shadow-[0_0_12px_#06b6d4] -translate-x-1/2 transition-all duration-75"></div>
                     </div>
                 </div>
 
                 <!-- 2. RADIAL RING PANEL -->
-                <div id="vis-ring" class="vis-panel w-full h-full hidden flex items-center justify-center gap-4">
-                    <div class="relative w-24 h-24 sm:w-32 sm:h-32 flex items-center justify-center shrink-0">
+                <div id="vis-ring" class="vis-panel w-full h-full hidden flex items-center justify-center gap-4 sm:gap-6">
+                    <div class="relative w-28 h-28 sm:w-32 sm:h-32 flex items-center justify-center shrink-0">
                         <canvas id="radial-canvas" width="130" height="130" class="w-full h-full"></canvas>
                         <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                             <span id="ring-note-name" class="text-xl sm:text-2xl font-bold font-mono text-cyan-400 leading-none">--</span>
-                            <span id="ring-octave" class="text-[9px] text-slate-400 font-mono mt-0.5">Octave -</span>
+                            <span id="ring-octave" class="text-[9px] sm:text-[10px] text-slate-400 font-mono mt-0.5">Octave -</span>
                         </div>
                     </div>
                     <div class="flex flex-col justify-center space-y-1 text-xs text-slate-300 font-mono">
-                        <div class="flex items-center gap-1.5">
-                            <div class="w-2 h-2 rounded-full bg-cyan-400"></div>
-                            <span class="text-[11px]">Angle = Chromatic Pitch Class</span>
+                        <div class="flex items-center gap-2">
+                            <div class="w-2.5 h-2.5 rounded-full bg-cyan-400 shrink-0"></div>
+                            <span>Angle = Pitch Class (0-360°)</span>
                         </div>
-                        <div class="flex items-center gap-1.5">
-                            <div class="w-2 h-2 rounded-full bg-amber-400"></div>
-                            <span class="text-[11px]">Highlights = Active Scale Notes</span>
+                        <div class="flex items-center gap-2">
+                            <div class="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0"></div>
+                            <span>Segments = Active Scale Notes</span>
                         </div>
                     </div>
                 </div>
@@ -179,27 +204,28 @@
         </main>
 
         <!-- Right Sidebar / Mobile Slide-Over Drawer Controls -->
-        <aside id="settings-drawer" class="fixed inset-y-0 right-0 z-40 w-80 sm:w-96 lg:static lg:w-80 glass-panel border-l border-slate-800 p-4 flex flex-col gap-4 overflow-y-auto shrink-0 transform translate-x-full lg:translate-x-0 transition-transform duration-300 shadow-2xl">
+        <div id="settings-backdrop" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 hidden lg:hidden"></div>
+        <aside id="settings-drawer" class="fixed inset-y-0 right-0 z-50 w-85 sm:w-96 lg:static lg:w-80 glass-panel border-l border-slate-800 p-4 flex flex-col gap-4 overflow-y-auto shrink-0 transform translate-x-full lg:translate-x-0 transition-transform duration-300">
             
             <div class="flex items-center justify-between lg:hidden border-b border-slate-800 pb-3">
-                <h3 class="font-bold text-sm text-slate-200 flex items-center gap-2">
+                <h2 class="font-bold text-sm text-slate-200 flex items-center gap-2">
                     <i class="fa-solid fa-sliders text-cyan-400"></i> Theremin Settings
-                </h3>
-                <button id="btn-close-settings" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center">
-                    <i class="fa-solid fa-xmark"></i>
+                </h2>
+                <button id="btn-close-drawer" class="text-slate-400 hover:text-slate-100 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
 
             <!-- Key & Custom Scale Management Section -->
             <div>
-                <h2 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-400 mb-2.5 flex items-center gap-2">
+                <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5 flex items-center gap-2">
                     <i class="fa-solid fa-key text-emerald-400"></i> Key & Scale Manager
                 </h2>
 
                 <div class="grid grid-cols-2 gap-2 mb-2.5">
                     <div>
                         <label class="text-[10px] font-semibold text-slate-400 block mb-1">Root Key</label>
-                        <select id="select-root-key" class="w-full bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-cyan-300 px-2 py-1.5 outline-none focus:border-cyan-500">
+                        <select id="select-root-key" class="w-full bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-cyan-300 px-2.5 py-1.5 outline-none focus:border-cyan-500">
                             <option value="0">C</option>
                             <option value="1">C# / Db</option>
                             <option value="2">D</option>
@@ -216,13 +242,11 @@
                     </div>
                     <div>
                         <label class="text-[10px] font-semibold text-slate-400 block mb-1">Scale Preset</label>
-                        <select id="select-scale-preset" class="w-full bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 px-2 py-1.5 outline-none focus:border-cyan-500">
+                        <select id="select-scale-preset" class="w-full bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 px-2.5 py-1.5 outline-none focus:border-cyan-500">
                             <option value="chromatic">Chromatic (All)</option>
                             <option value="major">Major (Ionian)</option>
                             <option value="natural_minor" selected>Natural Minor</option>
                             <option value="harmonic_minor">Harmonic Minor</option>
-                            <option value="melodic_minor">Melodic Minor</option>
-                            <option value="pentatonic_major">Pentatonic Major</option>
                             <option value="pentatonic_minor">Pentatonic Minor</option>
                             <option value="blues">Blues Scale</option>
                             <option value="dorian">Dorian Mode</option>
@@ -231,7 +255,7 @@
                     </div>
                 </div>
 
-                <div class="bg-slate-950/70 p-2 rounded-xl border border-slate-800 space-y-1.5">
+                <div class="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800 space-y-1.5">
                     <div class="flex justify-between items-center">
                         <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Active Notes Matrix</span>
                         <div class="flex gap-1">
@@ -246,30 +270,32 @@
             <hr class="border-slate-800">
 
             <div>
-                <h2 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-400 mb-2.5 flex items-center gap-2">
-                    <i class="fa-solid fa-sliders text-cyan-400"></i> Pitch Tuning & Snap
+                <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5 flex items-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles text-cyan-400"></i> Pitch Tuning & Snap Modes
                 </h2>
 
-                <div class="space-y-1.5">
+                <div class="space-y-2">
                     <div class="flex justify-between items-center">
                         <label class="text-xs font-semibold text-slate-300">Quantization Mode</label>
                         <span id="snap-status" class="text-[10px] px-2 py-0.5 rounded font-mono bg-slate-800 text-slate-400">Continuous</span>
                     </div>
                     <div class="grid grid-cols-3 gap-1 p-1 bg-slate-950 rounded-xl border border-slate-800 text-[11px]">
-                        <button id="btn-mode-free" class="py-1.5 rounded-lg font-medium bg-cyan-500 text-slate-950 font-semibold text-center">Free</button>
-                        <button id="btn-mode-scale" class="py-1.5 rounded-lg font-medium text-slate-400 text-center">Scale</button>
-                        <button id="btn-mode-magnet" class="py-1.5 rounded-lg font-medium text-slate-400 text-center">Magnet</button>
+                        <button id="btn-mode-free" class="py-1.5 rounded-lg font-medium transition-all bg-cyan-500 text-slate-950 font-semibold shadow text-center">Free</button>
+                        <button id="btn-mode-scale" class="py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition-all text-center">Scale</button>
+                        <button id="btn-mode-magnet" class="py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition-all text-center">Magnetic</button>
                     </div>
                 </div>
 
-                <div id="magnet-strength-container" class="mt-2.5 space-y-1 opacity-40 pointer-events-none transition-opacity">
+                <!-- Magnetic Pull Strength Slider -->
+                <div id="magnet-strength-container" class="mt-3 space-y-1 opacity-40 pointer-events-none transition-opacity">
                     <div class="flex justify-between text-xs font-semibold text-slate-300">
-                        <span>Magnetic Strength</span>
+                        <span>Magnetic Pull Strength</span>
                         <span id="magnet-value" class="font-mono text-cyan-400">50%</span>
                     </div>
                     <input id="slider-magnet" type="range" min="10" max="100" value="50" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
                 </div>
 
+                <!-- Auto-Snap Delay Slider -->
                 <div id="snap-delay-container" class="mt-3 space-y-1 opacity-40 pointer-events-none transition-opacity">
                     <div class="flex justify-between text-xs font-semibold text-slate-300">
                         <span>Auto-Snap Delay</span>
@@ -278,6 +304,7 @@
                     <input id="slider-snap-delay" type="range" min="0" max="1500" step="50" value="300" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
                 </div>
 
+                <!-- Portamento / Glide Speed -->
                 <div class="mt-3 space-y-1">
                     <div class="flex justify-between text-xs font-semibold text-slate-300">
                         <span>Glide Speed (Portamento)</span>
@@ -286,58 +313,68 @@
                     <input id="slider-glide" type="range" min="0" max="250" value="30" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
                 </div>
 
+                <!-- Frequency Range Selector -->
                 <div class="mt-3 space-y-1">
                     <div class="flex justify-between text-xs font-semibold text-slate-300">
                         <span>Octave Range</span>
                         <span id="range-value" class="font-mono text-cyan-400">C4 - C7</span>
                     </div>
                     <select id="select-range" class="w-full bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-300 px-2.5 py-1.5 outline-none focus:border-cyan-500">
-                        <option value="C2-C6">C2 - C6 (Bass to Soprano)</option>
-                        <option value="C3-C5">C3 - C5 (Standard)</option>
-                        <option value="C4-C7" selected>C4 - C7 (High Register)</option>
+                        <option value="C2-C6">C2 - C6 (~65 - 1046 Hz)</option>
+                        <option value="C3-C5">C3 - C5 (~130 - 523 Hz)</option>
+                        <option value="C4-C7" selected>C4 - C7 (~261 - 2093 Hz)</option>
                     </select>
                 </div>
             </div>
 
             <hr class="border-slate-800">
 
+            <!-- Audio & Timbre Settings -->
             <div>
-                <h2 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-400 mb-2.5 flex items-center gap-2">
+                <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5 flex items-center gap-2">
                     <i class="fa-solid fa-compact-disc text-indigo-400"></i> Timbre & Synthesis
                 </h2>
 
-                <div class="space-y-1">
+                <div class="space-y-1.5">
                     <label class="text-xs font-semibold text-slate-300">Waveform</label>
-                    <div class="grid grid-cols-4 gap-1">
-                        <button class="wave-btn active p-1.5 rounded-lg border border-slate-800 bg-slate-950 text-cyan-400 flex flex-col items-center gap-0.5 text-[11px]" data-wave="sine">Sine</button>
-                        <button class="wave-btn p-1.5 rounded-lg border border-slate-800 bg-slate-950 text-slate-400 flex flex-col items-center gap-0.5 text-[11px]" data-wave="triangle">Tri</button>
-                        <button class="wave-btn p-1.5 rounded-lg border border-slate-800 bg-slate-950 text-slate-400 flex flex-col items-center gap-0.5 text-[11px]" data-wave="sawtooth">Saw</button>
-                        <button class="wave-btn p-1.5 rounded-lg border border-slate-800 bg-slate-950 text-slate-400 flex flex-col items-center gap-0.5 text-[11px]" data-wave="square">Sq</button>
+                    <div class="grid grid-cols-4 gap-1.5">
+                        <button class="wave-btn active p-2 rounded-xl border border-slate-800 bg-slate-950 text-cyan-400 flex flex-col items-center gap-1 text-xs" data-wave="sine">
+                            <i class="fa-solid fa-wave-square"></i> Sine
+                        </button>
+                        <button class="wave-btn p-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 flex flex-col items-center gap-1 text-xs" data-wave="triangle">
+                            <i class="fa-solid fa-play -rotate-90"></i> Tri
+                        </button>
+                        <button class="wave-btn p-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 flex flex-col items-center gap-1 text-xs" data-wave="sawtooth">
+                            <i class="fa-solid fa-chart-line"></i> Saw
+                        </button>
+                        <button class="wave-btn p-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 flex flex-col items-center gap-1 text-xs" data-wave="square">
+                            <i class="fa-solid fa-square-full"></i> Sq
+                        </button>
                     </div>
                 </div>
 
-                <div class="mt-3 space-y-2 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
+                <!-- Vibrato Effect Controls -->
+                <div class="mt-3 space-y-2.5 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
                     <div class="flex items-center justify-between">
                         <span class="text-xs font-semibold text-amber-400 flex items-center gap-1.5">
-                            <i class="fa-solid fa-circle-nodes"></i> Vibrato LFO
+                            <i class="fa-solid fa-circle-nodes"></i> Dynamic Vibrato LFO
                         </span>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" id="toggle-vibrato" class="sr-only peer">
-                            <div class="w-8 h-4.5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-amber-400"></div>
+                            <div class="w-8 h-4 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-amber-400"></div>
                         </label>
                     </div>
 
                     <div id="vibrato-controls" class="opacity-40 pointer-events-none transition-opacity space-y-2.5">
-                        <div class="space-y-0.5">
-                            <div class="flex justify-between text-[11px] text-slate-300">
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-xs text-slate-300">
                                 <span>Rate</span>
                                 <span id="vib-rate-val" class="font-mono text-amber-400">5.0 Hz</span>
                             </div>
                             <input id="slider-vib-rate" type="range" min="0.5" max="15" step="0.1" value="5" class="w-full h-1 bg-slate-800 rounded-lg appearance-none accent-amber-400">
                         </div>
-
-                        <div class="space-y-0.5">
-                            <div class="flex justify-between text-[11px] text-slate-300">
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-xs text-slate-300">
                                 <span>Depth</span>
                                 <span id="vib-depth-val" class="font-mono text-amber-400">25 Cents</span>
                             </div>
@@ -347,46 +384,50 @@
                 </div>
             </div>
 
+            <hr class="border-slate-800">
+
+            <!-- Visual Options -->
             <div>
-                <h2 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-2">
-                    <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i> Visual Display
+                <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5 flex items-center gap-2">
+                    <i class="fa-solid fa-eye text-amber-400"></i> Display Options
                 </h2>
-                <div class="space-y-1.5 text-xs text-slate-300">
+                <div class="space-y-2 text-xs text-slate-300">
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" id="toggle-trails" checked class="rounded bg-slate-900 border-slate-800 text-cyan-500">
-                        <span>Motion Glow Trails</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" id="toggle-grid" checked class="rounded bg-slate-900 border-slate-800 text-cyan-500">
-                        <span>Note Grid Overlay</span>
+                        <span>Cursor Motion Glow Trails</span>
                     </label>
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" id="toggle-piano-overlay" checked class="rounded bg-slate-900 border-slate-800 text-cyan-500">
-                        <span>Piano Keys on Touchpad</span>
+                        <span>Show Piano Keys on Touchpad</span>
                     </label>
                 </div>
             </div>
         </aside>
     </div>
 
-    <div id="drawer-backdrop" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-30 hidden lg:hidden"></div>
-
+    <!-- Info Modal -->
     <div id="help-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="glass-panel max-w-md w-full rounded-2xl p-6 border border-slate-800 space-y-4 shadow-2xl">
             <div class="flex items-center justify-between border-b border-slate-800 pb-3">
                 <h3 class="font-bold text-lg text-slate-100 flex items-center gap-2">
                     <i class="fa-solid fa-circle-question text-cyan-400"></i> How to Play
                 </h3>
-                <button id="btn-close-modal" class="text-slate-400 hover:text-slate-100"><i class="fa-solid fa-xmark text-lg"></i></button>
+                <button id="btn-close-modal" class="text-slate-400 hover:text-slate-100 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
             </div>
-            <p class="text-sm text-slate-300 leading-relaxed">
-                Drag horizontally on the touchpad for pitch and vertically for volume. Use the <strong class="text-cyan-400">Settings</strong> button in the top bar to change scales, vibrato, or transpose octaves.
-            </p>
-            <button id="btn-modal-ok" class="w-full py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold transition-all">Got It!</button>
+            <div class="space-y-3 text-sm text-slate-300 leading-relaxed">
+                <p><strong class="text-cyan-400">Pitch (X-Axis):</strong> Drag left or right across the canvas to glide through frequencies.</p>
+                <p><strong class="text-indigo-400">Volume (Y-Axis):</strong> Drag up for louder volume, down for quieter.</p>
+                <p><strong class="text-amber-400">Scale Snapping:</strong> Enable Scale or Magnetic mode in the settings to automatically lock or pull notes into your chosen musical key after a short delay.</p>
+            </div>
+            <button id="btn-modal-ok" class="w-full py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold transition-all">
+                Got It!
+            </button>
         </div>
     </div>
 
-    <!-- APPLICATION LOGIC JavaScript -->
+    <!-- SCRIPT LOGIC -->
     <script>
         const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
@@ -395,8 +436,6 @@
             major: [0, 2, 4, 5, 7, 9, 11],
             natural_minor: [0, 2, 3, 5, 7, 8, 10],
             harmonic_minor: [0, 2, 3, 5, 7, 8, 11],
-            melodic_minor: [0, 2, 3, 5, 7, 9, 11],
-            pentatonic_major: [0, 2, 4, 7, 9],
             pentatonic_minor: [0, 3, 5, 7, 10],
             blues: [0, 3, 5, 6, 7, 10],
             dorian: [0, 2, 3, 5, 7, 9, 10]
@@ -415,18 +454,46 @@
         }
 
         const state = {
-            audioCtx: null, osc: null, gainNode: null, vibratoOsc: null, vibratoGain: null,
-            isPlaying: false, audioStarted: false,
-            minFreq: 261.63, maxFreq: 2093.00, currentFreq: 523.25, targetFreq: 523.25,
-            currentVol: 0.5, targetVol: 0.5, glideTimeMs: 30,
-            rootKey: 9, scalePreset: 'natural_minor',
-            activeNotes: [true, false, true, true, false, true, false, true, true, false, true, false],
-            quantizeMode: 'free', magnetStrength: 0.5,
-            snapDelayMs: 300, lastCursorMoveTime: 0, lastRawX: 0, motionThresholdPx: 2,
-            waveform: 'sine', vibratoEnabled: false, vibratoRate: 5.0, vibratoDepthCents: 25,
-            vibratoShape: 'sine', lfoPhase: 0,
-            showTrails: true, showGrid: true, showPianoOverlay: true, activeTab: 'vis-strip',
-            isInteracting: false, cursorX: 0.5, cursorY: 0.5, trailPoints: []
+            audioCtx: null,
+            osc: null,
+            gainNode: null,
+            vibratoOsc: null,
+            vibratoGain: null,
+            isPlaying: false,
+            audioStarted: false,
+            
+            minFreq: 261.63,
+            maxFreq: 2093.00,
+            currentFreq: 523.25,
+            targetFreq: 523.25,
+            currentVol: 0.5,
+            targetVol: 0.5,
+            glideTimeMs: 30,
+            
+            rootKey: 9, // A
+            scalePreset: 'natural_minor',
+            activeNotes: [true, false, true, true, false, true, false, true, true, false, true, false], // A Minor
+            quantizeMode: 'free',
+            magnetStrength: 0.5,
+            snapDelayMs: 300,
+            lastCursorMoveTime: 0,
+            lastRawX: 0,
+            motionThresholdPx: 2,
+
+            waveform: 'sine',
+            vibratoEnabled: false,
+            vibratoRate: 5.0,
+            vibratoDepthCents: 25,
+            vibratoShape: 'sine',
+            lfoPhase: 0,
+            
+            showTrails: true,
+            showPianoOverlay: true,
+            activeTab: 'vis-strip',
+            isInteracting: false,
+            cursorX: 0.5,
+            cursorY: 0.5,
+            trailPoints: []
         };
 
         function findNearestScaleMidi(rawMidi) {
@@ -460,7 +527,6 @@
         const ctx = canvas.getContext('2d');
         const overlayHint = document.getElementById('canvas-overlay-hint');
         const btnAudioToggle = document.getElementById('btn-audio-toggle');
-        const audioToggleText = document.getElementById('audio-toggle-text');
         const btnVibratoBypass = document.getElementById('btn-vibrato-bypass');
         const vibratoBypassLabel = document.getElementById('vibrato-bypass-label');
         
@@ -470,10 +536,13 @@
         const readoutOctave = document.getElementById('readout-octave');
         const readoutCents = document.getElementById('readout-cents');
         const centBarFill = document.getElementById('cent-bar-fill');
+        
         const stripCursor = document.getElementById('strip-cursor');
         const vibratoRibbon = document.getElementById('vibrato-ribbon');
         const chromaticKeysContainer = document.getElementById('chromatic-keys-container');
+        
         const radialCanvas = document.getElementById('radial-canvas');
+        const radialCtx = radialCanvas.getContext('2d');
         const ringNoteName = document.getElementById('ring-note-name');
         const ringOctave = document.getElementById('ring-octave');
 
@@ -485,7 +554,7 @@
                 const isRoot = i === state.rootKey;
                 const isActive = state.activeNotes[i];
                 const btn = document.createElement('button');
-                btn.className = `py-1 rounded text-[10px] font-mono font-bold transition-all border ${
+                btn.className = `py-1 rounded text-[11px] font-mono font-bold transition-all border ${
                     isActive ? (isRoot ? 'bg-amber-400 text-slate-950 border-amber-300' : 'bg-cyan-500 text-slate-950 border-cyan-400') : 'bg-slate-900 text-slate-500 border-slate-800'
                 }`;
                 btn.textContent = NOTE_NAMES[i];
@@ -504,83 +573,62 @@
             if (state.scalePreset === 'custom') return;
             const formula = SCALE_PRESETS[state.scalePreset] || SCALE_PRESETS.chromatic;
             state.activeNotes = new Array(12).fill(false);
-            formula.forEach(offset => { state.activeNotes[(state.rootKey + offset) % 12] = true; });
+            formula.forEach(offset => {
+                const noteIdx = (state.rootKey + offset) % 12;
+                state.activeNotes[noteIdx] = true;
+            });
             renderNoteMatrixUI();
             buildChromaticStripKeys();
         }
 
         function initAudio() {
-            if (state.audioCtx) {
-                if (state.audioCtx.state === 'suspended') {
-                    state.audioCtx.resume();
-                }
-                return;
-            }
             const AudioContext = window.AudioContext || window.webkitAudioContext;
-            state.audioCtx = new AudioContext();
+            if (!state.audioCtx) {
+                state.audioCtx = new AudioContext();
+                state.osc = state.audioCtx.createOscillator();
+                state.osc.type = state.waveform;
+                state.osc.frequency.setValueAtTime(state.currentFreq, state.audioCtx.currentTime);
+
+                state.gainNode = state.audioCtx.createGain();
+                state.gainNode.gain.setValueAtTime(0, state.audioCtx.currentTime);
+
+                state.vibratoOsc = state.audioCtx.createOscillator();
+                state.vibratoOsc.type = state.vibratoShape;
+                state.vibratoOsc.frequency.setValueAtTime(state.vibratoRate, state.audioCtx.currentTime);
+                
+                state.vibratoGain = state.audioCtx.createGain();
+                state.vibratoGain.gain.setValueAtTime(0, state.audioCtx.currentTime);
+
+                state.vibratoOsc.connect(state.vibratoGain);
+                state.vibratoGain.connect(state.osc.frequency);
+                state.osc.connect(state.gainNode);
+                state.gainNode.connect(state.audioCtx.destination);
+
+                state.osc.start();
+                state.vibratoOsc.start();
+                state.audioStarted = true;
+            }
             if (state.audioCtx.state === 'suspended') {
                 state.audioCtx.resume();
             }
-
-            state.osc = state.audioCtx.createOscillator();
-            state.osc.type = state.waveform;
-            state.osc.frequency.setValueAtTime(state.currentFreq, state.audioCtx.currentTime);
-
-            state.gainNode = state.audioCtx.createGain();
-            state.gainNode.gain.setValueAtTime(0, state.audioCtx.currentTime);
-
-            state.vibratoOsc = state.audioCtx.createOscillator();
-            state.vibratoOsc.type = state.vibratoShape;
-            state.vibratoOsc.frequency.setValueAtTime(state.vibratoRate, state.audioCtx.currentTime);
-            
-            state.vibratoGain = state.audioCtx.createGain();
-            state.vibratoGain.gain.setValueAtTime(0, state.audioCtx.currentTime);
-
-            state.vibratoOsc.connect(state.vibratoGain);
-            state.vibratoGain.connect(state.osc.frequency);
-            state.osc.connect(state.gainNode);
-            state.gainNode.connect(state.audioCtx.destination);
-
-            state.osc.start();
-            state.vibratoOsc.start();
-            state.audioStarted = true;
         }
 
         function setAudioState(active) {
-            if (!state.audioStarted && active) initAudio();
-            if (state.audioCtx && state.audioCtx.state === 'suspended' && active) {
-                state.audioCtx.resume();
-            }
+            initAudio();
             state.isPlaying = active;
-
-            if (btnAudioToggle) {
-                if (state.audioStarted && state.isPlaying) {
-                    btnAudioToggle.className = "px-3.5 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 bg-rose-500 hover:bg-rose-400 text-slate-950 transition-all shadow-lg shadow-rose-500/20 active:scale-95";
-                    audioToggleText.textContent = "Mute";
-                } else {
-                    btnAudioToggle.className = "px-3.5 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 transition-all shadow-lg shadow-emerald-500/20 active:scale-95";
-                    audioToggleText.textContent = state.audioStarted ? "Unmute" : "Activate";
-                }
-            }
-        }
-
-        function updateVibratoUI() {
-            const toggleVibrato = document.getElementById('toggle-vibrato');
-            if (toggleVibrato) toggleVibrato.checked = state.vibratoEnabled;
-            if (state.vibratoEnabled) {
-                btnVibratoBypass.className = "px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 transition-all shadow-lg shadow-amber-500/20 active:scale-95";
-                vibratoBypassLabel.textContent = "Vib: ON";
-            } else {
-                btnVibratoBypass.className = "px-3 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all active:scale-95";
-                vibratoBypassLabel.textContent = "Vib: OFF";
-            }
+            btnAudioToggle.className = active 
+                ? "px-3.5 sm:px-5 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 bg-rose-500 hover:bg-rose-400 text-slate-950 transition-all shadow-lg shadow-rose-500/20 active:scale-95"
+                : "px-3.5 sm:px-5 py-2 rounded-xl font-semibold text-xs sm:text-sm flex items-center gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 transition-all shadow-lg shadow-emerald-500/20 active:scale-95";
+            btnAudioToggle.innerHTML = active ? `<i class="fa-solid fa-volume-xmark text-sm"></i><span>Mute Audio</span>` : `<i class="fa-solid fa-volume-high text-sm"></i><span>Unmute Audio</span>`;
         }
 
         function updateAudioNodes() {
             if (!state.audioStarted || !state.audioCtx) return;
             const now = state.audioCtx.currentTime;
+            const glideSec = state.glideTimeMs / 1000;
             const freq = calculateTargetFrequency(state.targetFreq);
-            state.osc.frequency.setTargetAtTime(freq, now, Math.max(0.005, state.glideTimeMs / 1000));
+
+            state.osc.frequency.setTargetAtTime(freq, now, Math.max(0.005, glideSec));
             const targetGain = (state.isInteracting && state.isPlaying) ? state.targetVol : 0;
             state.gainNode.gain.setTargetAtTime(targetGain, now, 0.015);
 
@@ -597,14 +645,18 @@
             chromaticKeysContainer.innerHTML = '';
             const minMidi = Math.round(freqToMidi(state.minFreq));
             const maxMidi = Math.round(freqToMidi(state.maxFreq));
+
             for (let m = minMidi; m <= maxMidi; m++) {
                 const noteIdx = (m % 12 + 12) % 12;
                 const isRoot = noteIdx === state.rootKey;
                 const inScale = state.activeNotes[noteIdx];
                 const keyEl = document.createElement('div');
-                keyEl.className = `flex-1 border-r border-slate-900/60 flex flex-col justify-end items-center pb-0.5 text-[8px] font-mono select-none ${
-                    inScale ? (isRoot ? 'bg-amber-500/20 text-amber-300 font-bold' : 'bg-slate-800/70 text-cyan-200') : 'bg-slate-900 text-slate-700 opacity-30'
-                }`;
+                
+                let bgStyle = 'bg-slate-800/20 text-slate-600 opacity-40';
+                if (inScale) {
+                    bgStyle = isRoot ? 'bg-amber-500/20 border-t-2 border-amber-400 text-amber-300 font-bold opacity-100' : 'bg-slate-800/70 text-cyan-200 border-t border-cyan-400/40 opacity-100';
+                }
+                keyEl.className = `flex-1 border-r border-slate-900/60 flex flex-col justify-end items-center pb-1 text-[8px] font-mono select-none ${bgStyle}`;
                 chromaticKeysContainer.appendChild(keyEl);
             }
         }
@@ -614,7 +666,6 @@
             canvas.width = rect.width;
             canvas.height = rect.height;
         }
-
         window.addEventListener('resize', resizeCanvases);
 
         function handlePointerMove(clientX, clientY) {
@@ -626,65 +677,64 @@
                 state.lastRawX = rawX;
             }
 
-            state.cursorX = Math.max(0, Math.min(1, rawX / rect.width));
-            state.cursorY = Math.max(0, Math.min(1, 1 - (clientY - rect.top) / rect.height));
+            const x = Math.max(0, Math.min(1, rawX / rect.width));
+            const y = Math.max(0, Math.min(1, 1 - (clientY - rect.top) / rect.height));
+
+            state.cursorX = x;
+            state.cursorY = y;
             state.isInteracting = true;
 
             const minLog = Math.log2(state.minFreq);
             const maxLog = Math.log2(state.maxFreq);
-            state.targetFreq = Math.pow(2, minLog + state.cursorX * (maxLog - minLog));
-            state.targetVol = Math.pow(state.cursorY, 1.5);
+            state.targetFreq = Math.pow(2, minLog + x * (maxLog - minLog));
+            state.targetVol = Math.pow(y, 1.5);
 
             if (overlayHint) overlayHint.style.opacity = '0';
             if (state.showTrails) {
-                state.trailPoints.push({ x: rawX, y: clientY - rect.top, alpha: 1.0, radius: 10 + state.cursorY * 15 });
+                state.trailPoints.push({ x: rawX, y: clientY - rect.top, alpha: 1.0, radius: 12 + y * 18 });
             }
         }
 
-        function handlePointerEnd() { state.isInteracting = false; }
+        function handlePointerLeave() { state.isInteracting = false; }
 
-        // Mouse & Pointer Support
+        // Robust Touch & Mouse Handlers for Mobile & Web
         canvas.addEventListener('pointerdown', (e) => {
             canvas.setPointerCapture(e.pointerId);
             initAudio();
-            setAudioState(true);
+            if (!state.audioStarted || !state.isPlaying) setAudioState(true);
             state.lastRawX = e.clientX - canvas.getBoundingClientRect().left;
             state.lastCursorMoveTime = Date.now();
             handlePointerMove(e.clientX, e.clientY);
         });
-        canvas.addEventListener('pointermove', (e) => { if (state.isInteracting) handlePointerMove(e.clientX, e.clientY); });
-        canvas.addEventListener('pointerup', handlePointerEnd);
-        canvas.addEventListener('pointercancel', handlePointerEnd);
 
-        // Robust Touch Handlers for Mobile Devices
+        canvas.addEventListener('pointermove', (e) => {
+            if (state.isInteracting) handlePointerMove(e.clientX, e.clientY);
+        });
+
+        canvas.addEventListener('pointerup', handlePointerLeave);
+        canvas.addEventListener('pointercancel', handlePointerLeave);
+
+        // Explicit Mobile Touch Support
         canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             initAudio();
-            setAudioState(true);
-            if (e.touches && e.touches[0]) {
-                const touch = e.touches[0];
-                state.lastRawX = touch.clientX - canvas.getBoundingClientRect().left;
+            if (!state.audioStarted || !state.isPlaying) setAudioState(true);
+            if (e.touches.length > 0) {
+                state.lastRawX = e.touches[0].clientX - canvas.getBoundingClientRect().left;
                 state.lastCursorMoveTime = Date.now();
-                handlePointerMove(touch.clientX, touch.clientY);
+                handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
             }
         }, { passive: false });
 
         canvas.addEventListener('touchmove', (e) => {
             e.preventDefault();
-            if (e.touches && e.touches[0]) {
+            if (e.touches.length > 0 && state.isInteracting) {
                 handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
             }
         }, { passive: false });
 
-        canvas.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            handlePointerEnd();
-        }, { passive: false });
-
-        canvas.addEventListener('touchcancel', (e) => {
-            e.preventDefault();
-            handlePointerEnd();
-        }, { passive: false });
+        canvas.addEventListener('touchend', (e) => { e.preventDefault(); handlePointerLeave(); }, { passive: false });
+        canvas.addEventListener('touchcancel', (e) => { e.preventDefault(); handlePointerLeave(); }, { passive: false });
 
         function drawPianoOverlay() {
             const minMidi = Math.round(freqToMidi(state.minFreq));
@@ -693,26 +743,19 @@
             const logSpan = Math.log2(state.maxFreq) - logMin;
             const soundingMidi = Math.round(freqToMidi(state.currentFreq));
 
-            ctx.textAlign = 'center';
-            ctx.font = '9px JetBrains Mono, monospace';
-
             for (let m = minMidi; m <= maxMidi; m++) {
                 const xStart = Math.max(0, ((Math.log2(midiToFreq(m - 0.5)) - logMin) / logSpan) * canvas.width);
                 const xEnd = Math.min(canvas.width, ((Math.log2(midiToFreq(m + 0.5)) - logMin) / logSpan) * canvas.width);
                 const kw = xEnd - xStart;
                 const noteIdx = (m % 12 + 12) % 12;
+                const isRoot = noteIdx === state.rootKey;
                 const inScale = state.activeNotes[noteIdx];
                 const isSounding = state.isInteracting && soundingMidi === m;
 
-                ctx.fillStyle = isSounding ? (inScale ? 'rgba(6, 182, 212, 0.35)' : 'rgba(148, 163, 184, 0.25)') : (inScale ? 'rgba(148, 163, 184, 0.1)' : 'rgba(148, 163, 184, 0.03)');
+                ctx.fillStyle = isSounding ? (isRoot ? 'rgba(251, 191, 36, 0.4)' : 'rgba(6, 182, 212, 0.4)') : (inScale ? 'rgba(148, 163, 184, 0.08)' : 'rgba(148, 163, 184, 0.02)');
                 ctx.fillRect(xStart, 0, kw, canvas.height);
-                ctx.strokeStyle = isSounding ? '#06b6d4' : 'rgba(255, 255, 255, 0.04)';
+                ctx.strokeStyle = inScale ? 'rgba(6, 182, 212, 0.2)' : 'rgba(255, 255, 255, 0.04)';
                 ctx.strokeRect(xStart, 0, kw, canvas.height);
-
-                if (kw > 18) {
-                    ctx.fillStyle = isSounding ? '#ffffff' : (inScale ? '#38bdf8' : '#475569');
-                    ctx.fillText(NOTE_NAMES[noteIdx], xStart + kw / 2, canvas.height - 12);
-                }
             }
         }
 
@@ -726,24 +769,34 @@
                 ctx.arc(pt.x, pt.y, pt.radius * pt.alpha, 0, Math.PI * 2);
                 ctx.fillStyle = `rgba(6, 182, 212, ${pt.alpha * 0.35})`;
                 ctx.fill();
-                pt.alpha -= 0.04;
+                pt.alpha -= 0.03;
                 if (pt.alpha <= 0) state.trailPoints.splice(i, 1);
             }
 
             if (state.isInteracting) {
                 const px = state.cursorX * canvas.width;
                 const py = (1 - state.cursorY) * canvas.height;
-                const grad = ctx.createRadialGradient(px, py, 2, px, py, 40);
-                grad.addColorStop(0, state.vibratoEnabled ? 'rgba(251, 191, 36, 0.9)' : 'rgba(6, 182, 212, 0.8)');
-                grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-                ctx.beginPath();
-                ctx.arc(px, py, 40, 0, Math.PI * 2);
-                ctx.fillStyle = grad;
-                ctx.fill();
+                const snapLocked = state.quantizeMode !== 'free' && isSnapEngaged();
+
+                if (state.quantizeMode !== 'free') {
+                    const logMin = Math.log2(state.minFreq);
+                    const logMax = Math.log2(state.maxFreq);
+                    const targetFreq = calculateTargetFrequency(state.targetFreq);
+                    const snapX = Math.max(0, Math.min(1, (Math.log2(targetFreq) - logMin) / (logMax - logMin))) * canvas.width;
+
+                    if (Math.abs(px - snapX) > 1) {
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.moveTo(px, py); ctx.lineTo(snapX, py);
+                        ctx.strokeStyle = snapLocked ? '#fbbf24' : 'rgba(6, 182, 212, 0.6)';
+                        ctx.lineWidth = 2; ctx.setLineDash([4, 4]); ctx.stroke();
+                        ctx.restore();
+                    }
+                }
 
                 ctx.beginPath();
-                ctx.arc(px, py, 5, 0, Math.PI * 2);
-                ctx.fillStyle = '#ffffff';
+                ctx.arc(px, py, 25, 0, Math.PI * 2);
+                ctx.fillStyle = snapLocked ? 'rgba(52, 211, 153, 0.3)' : 'rgba(6, 182, 212, 0.3)';
                 ctx.fill();
             }
         }
@@ -752,46 +805,50 @@
             const w = radialCanvas.width;
             const h = radialCanvas.height;
             const cx = w / 2, cy = h / 2;
-            const radius = Math.min(w, h) / 2 - 6;
-            radialCtx.clearRect(0, 0, w, h);
+            const radius = Math.min(w, h) / 2 - 8;
 
+            radialCtx.clearRect(0, 0, w, h);
             for (let i = 0; i < 12; i++) {
+                const isRoot = i === state.rootKey;
+                const inScale = state.activeNotes[i];
                 const startAngle = (i / 12) * Math.PI * 2 - Math.PI / 2 - (Math.PI / 24);
-                if (state.activeNotes[i]) {
+                const endAngle = startAngle + (Math.PI / 12);
+
+                if (inScale) {
                     radialCtx.beginPath();
-                    radialCtx.arc(cx, cy, radius, startAngle, startAngle + (Math.PI / 12));
-                    radialCtx.strokeStyle = (i === state.rootKey) ? '#fbbf24' : '#06b6d4';
-                    radialCtx.lineWidth = 4;
+                    radialCtx.arc(cx, cy, radius, startAngle, endAngle);
+                    radialCtx.strokeStyle = isRoot ? '#fbbf24' : '#06b6d4';
+                    radialCtx.lineWidth = isRoot ? 4 : 3;
                     radialCtx.stroke();
                 }
             }
+
             const semitoneProgress = (pitch.midi % 12 + 12) % 12;
             const angle = (semitoneProgress / 12) * Math.PI * 2 - Math.PI / 2;
-            const px = cx + Math.cos(angle) * (radius * 0.7);
-            const py = cy + Math.sin(angle) * (radius * 0.7);
+            const px = cx + Math.cos(angle) * (radius - 16);
+            const py = cy + Math.sin(angle) * (radius - 16);
 
             radialCtx.beginPath();
             radialCtx.arc(px, py, 5, 0, Math.PI * 2);
-            radialCtx.fillStyle = '#fbbf24';
+            radialCtx.fillStyle = '#06b6d4';
             radialCtx.fill();
         }
-
-        const radialCtx = radialCanvas.getContext('2d');
 
         function masterLoop() {
             updateAudioNodes();
             state.lfoPhase += (state.vibratoRate * Math.PI * 2) / 60;
+
             const baseFreq = state.currentFreq;
             const pitch = getPitchDetails(baseFreq);
 
-            displayFreq.textContent = `${Math.round(baseFreq)}Hz`;
+            displayFreq.textContent = `${baseFreq.toFixed(1)} Hz`;
             displayVol.textContent = `${Math.round(state.currentVol * 100)}%`;
             readoutNote.textContent = pitch.noteName;
             readoutOctave.textContent = `Oct ${pitch.octave}`;
-            readoutCents.textContent = `${pitch.cents >= 0 ? '+' : ''}${pitch.cents}c`;
+            readoutCents.textContent = `${pitch.cents >= 0 ? '+' : ''}${pitch.cents} c`;
 
             const centRatio = Math.max(-50, Math.min(50, pitch.cents)) / 50;
-            centBarFill.style.left = '50%';
+            centBarFill.style.left = centRatio >= 0 ? '50%' : `${50 + centRatio * 50}%`;
             centBarFill.style.width = `${Math.abs(centRatio) * 50}%`;
 
             const logMin = Math.log2(state.minFreq);
@@ -800,10 +857,10 @@
             stripCursor.style.left = `${freqRatio * 100}%`;
 
             if (state.vibratoEnabled) {
-                const ribbonWidth = (state.vibratoDepthCents / (1200 * (logMax - logMin))) * 100 * 2;
+                const ribbonWidthCents = (state.vibratoDepthCents / (1200 * (logMax - logMin))) * 100 * 2;
                 vibratoRibbon.style.display = 'block';
                 vibratoRibbon.style.left = `${freqRatio * 100}%`;
-                vibratoRibbon.style.width = `${Math.max(1, ribbonWidth)}%`;
+                vibratoRibbon.style.width = `${Math.max(0.5, ribbonWidthCents)}%`;
             } else {
                 vibratoRibbon.style.display = 'none';
             }
@@ -817,33 +874,17 @@
         }
 
         function setupUIEventListeners() {
-            btnAudioToggle.addEventListener('click', () => {
-                initAudio();
-                setAudioState(!state.isPlaying);
-            });
+            btnAudioToggle.addEventListener('click', () => setAudioState(!state.isPlaying));
 
-            btnVibratoBypass.addEventListener('click', () => {
-                state.vibratoEnabled = !state.vibratoEnabled;
-                updateVibratoUI();
-            });
-
+            // Mobile Drawer Controls
             const drawer = document.getElementById('settings-drawer');
-            const backdrop = document.getElementById('drawer-backdrop');
-            const btnToggleSettings = document.getElementById('btn-toggle-settings');
-            const btnCloseSettings = document.getElementById('btn-close-settings');
-
+            const backdrop = document.getElementById('settings-backdrop');
             function toggleDrawer(open) {
-                if (open) {
-                    drawer.classList.remove('translate-x-full');
-                    backdrop.classList.remove('hidden');
-                } else {
-                    drawer.classList.add('translate-x-full');
-                    backdrop.classList.add('hidden');
-                }
+                drawer.classList.toggle('translate-x-full', !open);
+                backdrop.classList.toggle('hidden', !open);
             }
-
-            btnToggleSettings.addEventListener('click', () => toggleDrawer(true));
-            btnCloseSettings.addEventListener('click', () => toggleDrawer(false));
+            document.getElementById('btn-toggle-drawer').addEventListener('click', () => toggleDrawer(true));
+            document.getElementById('btn-close-drawer').addEventListener('click', () => toggleDrawer(false));
             backdrop.addEventListener('click', () => toggleDrawer(false));
 
             document.getElementById('select-root-key').addEventListener('change', (e) => {
@@ -872,120 +913,22 @@
                 buildChromaticStripKeys();
             });
 
+            // Quantization Mode Buttons & Slider Unlock Fix
             const btnModeFree = document.getElementById('btn-mode-free');
             const btnModeScale = document.getElementById('btn-mode-scale');
             const btnModeMagnet = document.getElementById('btn-mode-magnet');
             const snapStatus = document.getElementById('snap-status');
             const magnetContainer = document.getElementById('magnet-strength-container');
+            const snapDelayContainer = document.getElementById('snap-delay-container');
 
-            function updateQuantizeUI() {
-                btnModeFree.className = 'py-1.5 rounded-lg font-medium text-slate-400 text-center';
-                btnModeScale.className = 'py-1.5 rounded-lg font-medium text-slate-400 text-center';
-                btnModeMagnet.className = 'py-1.5 rounded-lg font-medium text-slate-400 text-center';
-                magnetContainer.style.opacity = '0.4';
-                magnetContainer.style.pointerEvents = 'none';
+            function updateQuantizeModeUI() {
+                btnModeFree.className = 'py-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200 text-center';
+                btnModeScale.className = 'py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition-all text-center';
+                btnModeMagnet.className = 'py-1.5 rounded-lg font-medium text-slate-400 hover:text-slate-200 transition-all text-center';
 
-                if (state.quantizeMode === 'free') {
-                    btnModeFree.className = 'py-1.5 rounded-lg font-medium bg-cyan-500 text-slate-950 font-semibold text-center';
-                    snapStatus.textContent = 'Continuous';
-                } else if (state.quantizeMode === 'scale') {
-                    btnModeScale.className = 'py-1.5 rounded-lg font-medium bg-cyan-500 text-slate-950 font-semibold text-center';
-                    snapStatus.textContent = 'Scale Snap';
-                } else if (state.quantizeMode === 'magnetic') {
-                    btnModeMagnet.className = 'py-1.5 rounded-lg font-medium bg-cyan-500 text-slate-950 font-semibold text-center';
-                    snapStatus.textContent = 'Magnetic';
-                    magnetContainer.style.opacity = '1';
-                    magnetContainer.style.pointerEvents = 'auto';
-                }
-            }
+                const snapActive = state.quantizeMode !== 'free';
+                snapDelayContainer.style.opacity = snapActive ? '1' : '0.4';
+                snapDelayContainer.style.pointerEvents = snapActive ? 'auto' : 'none';
 
-            btnModeFree.addEventListener('click', () => { state.quantizeMode = 'free'; updateQuantizeUI(); });
-            btnModeScale.addEventListener('click', () => { state.quantizeMode = 'scale'; updateQuantizeUI(); });
-            btnModeMagnet.addEventListener('click', () => { state.quantizeMode = 'magnetic'; updateQuantizeUI(); });
-
-            document.getElementById('slider-magnet').addEventListener('input', (e) => {
-                state.magnetStrength = parseInt(e.target.value) / 100;
-                document.getElementById('magnet-value').textContent = `${e.target.value}%`;
-            });
-
-            document.querySelectorAll('.vis-tab-btn').forEach(tab => {
-                tab.addEventListener('click', () => {
-                    const targetId = tab.getAttribute('data-target');
-                    document.querySelectorAll('.vis-tab-btn').forEach(t => t.className = 'vis-tab-btn px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-800 flex items-center gap-1.5');
-                    tab.className = 'vis-tab-btn active px-3 py-1.5 rounded-lg text-xs font-medium bg-cyan-500 text-slate-950 font-semibold shadow flex items-center gap-1.5';
-                    document.querySelectorAll('.vis-panel').forEach(p => p.classList.toggle('hidden', p.id !== targetId));
-                });
-            });
-
-            document.getElementById('slider-glide').addEventListener('input', (e) => {
-                state.glideTimeMs = parseInt(e.target.value);
-                document.getElementById('glide-value').textContent = `${state.glideTimeMs} ms`;
-            });
-
-            const RANGE_PRESETS = {
-                'C2-C6': { min: 65.41, max: 1046.50, low: 'C2 (65Hz)', high: 'C6 (1046Hz)' },
-                'C3-C5': { min: 130.81, max: 523.25, low: 'C3 (131Hz)', high: 'C5 (523Hz)' },
-                'C4-C7': { min: 261.63, max: 2093.00, low: 'C4 (262Hz)', high: 'C7 (2093Hz)' }
-            };
-            document.getElementById('select-range').addEventListener('change', (e) => {
-                const preset = RANGE_PRESETS[e.target.value];
-                if (!preset) return;
-                state.minFreq = preset.min;
-                state.maxFreq = preset.max;
-                document.getElementById('strip-range-low').textContent = preset.low;
-                document.getElementById('strip-range-high').textContent = preset.high;
-                buildChromaticStripKeys();
-            });
-
-            document.querySelectorAll('.wave-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    document.querySelectorAll('.wave-btn').forEach(b => b.className = 'wave-btn p-1.5 rounded-lg border border-slate-800 bg-slate-950 text-slate-400 flex flex-col items-center gap-0.5 text-[11px]');
-                    btn.className = 'wave-btn active p-1.5 rounded-lg border border-slate-800 bg-slate-950 text-cyan-400 flex flex-col items-center gap-0.5 text-[11px]';
-                    state.waveform = btn.getAttribute('data-wave');
-                    if (state.osc) state.osc.type = state.waveform;
-                });
-            });
-
-            const toggleVibrato = document.getElementById('toggle-vibrato');
-            const vibratoControls = document.getElementById('vibrato-controls');
-            toggleVibrato.addEventListener('change', (e) => {
-                state.vibratoEnabled = e.target.checked;
-                vibratoControls.style.opacity = state.vibratoEnabled ? '1' : '0.4';
-                vibratoControls.style.pointerEvents = state.vibratoEnabled ? 'auto' : 'none';
-                updateVibratoUI();
-            });
-
-            document.getElementById('slider-vib-rate').addEventListener('input', (e) => {
-                state.vibratoRate = parseFloat(e.target.value);
-                document.getElementById('vib-rate-val').textContent = `${state.vibratoRate.toFixed(1)} Hz`;
-            });
-            document.getElementById('slider-vib-depth').addEventListener('input', (e) => {
-                state.vibratoDepthCents = parseInt(e.target.value);
-                document.getElementById('vib-depth-val').textContent = `${state.vibratoDepthCents} Cents`;
-            });
-
-            document.getElementById('toggle-trails').addEventListener('change', (e) => state.showTrails = e.target.checked);
-            document.getElementById('toggle-grid').addEventListener('change', (e) => state.showGrid = e.target.checked);
-            document.getElementById('toggle-piano-overlay').addEventListener('change', (e) => state.showPianoOverlay = e.target.checked);
-            document.getElementById('slider-snap-delay').addEventListener('input', (e) => {
-                state.snapDelayMs = parseInt(e.target.value);
-                document.getElementById('snap-delay-value').textContent = `${state.snapDelayMs} ms`;
-            });
-
-            const helpModal = document.getElementById('help-modal');
-            document.getElementById('btn-help').addEventListener('click', () => helpModal.classList.remove('hidden'));
-            document.getElementById('btn-close-modal').addEventListener('click', () => helpModal.classList.add('hidden'));
-            document.getElementById('btn-modal-ok').addEventListener('click', () => helpModal.classList.add('hidden'));
-        }
-
-        window.addEventListener('load', () => {
-            resizeCanvases();
-            updateScaleFromPreset();
-            renderNoteMatrixUI();
-            buildChromaticStripKeys();
-            setupUIEventListeners();
-            requestAnimationFrame(masterLoop);
-        });
-    </script>
-</body>
-</html>
+                magnetContainer.style.opacity = state.quantizeMode === 'magnetic' ? '1' : '0.4';
+                magnetContainer.style.pointerEvents = state.
