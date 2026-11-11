@@ -20,7 +20,7 @@
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
                         mono: ['JetBrains Mono', 'monospace'],
-                    },
+                    }
                 }
             }
         }
@@ -510,9 +510,18 @@
         }
 
         function initAudio() {
-            if (state.audioStarted) return;
+            if (state.audioCtx) {
+                if (state.audioCtx.state === 'suspended') {
+                    state.audioCtx.resume();
+                }
+                return;
+            }
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             state.audioCtx = new AudioContext();
+            if (state.audioCtx.state === 'suspended') {
+                state.audioCtx.resume();
+            }
+
             state.osc = state.audioCtx.createOscillator();
             state.osc.type = state.waveform;
             state.osc.frequency.setValueAtTime(state.currentFreq, state.audioCtx.currentTime);
@@ -539,7 +548,9 @@
 
         function setAudioState(active) {
             if (!state.audioStarted && active) initAudio();
-            if (state.audioCtx && state.audioCtx.state === 'suspended' && active) state.audioCtx.resume();
+            if (state.audioCtx && state.audioCtx.state === 'suspended' && active) {
+                state.audioCtx.resume();
+            }
             state.isPlaying = active;
 
             if (btnAudioToggle) {
@@ -606,10 +617,8 @@
 
         window.addEventListener('resize', resizeCanvases);
 
-        function handlePointerMove(e) {
+        function handlePointerMove(clientX, clientY) {
             const rect = canvas.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
             const rawX = clientX - rect.left;
 
             if (Math.abs(rawX - state.lastRawX) > state.motionThresholdPx) {
@@ -634,16 +643,48 @@
 
         function handlePointerEnd() { state.isInteracting = false; }
 
+        // Mouse & Pointer Support
         canvas.addEventListener('pointerdown', (e) => {
             canvas.setPointerCapture(e.pointerId);
-            if (!state.audioStarted) setAudioState(true);
+            initAudio();
+            setAudioState(true);
             state.lastRawX = e.clientX - canvas.getBoundingClientRect().left;
             state.lastCursorMoveTime = Date.now();
-            handlePointerMove(e);
+            handlePointerMove(e.clientX, e.clientY);
         });
-        canvas.addEventListener('pointermove', (e) => { if (state.isInteracting) handlePointerMove(e); });
+        canvas.addEventListener('pointermove', (e) => { if (state.isInteracting) handlePointerMove(e.clientX, e.clientY); });
         canvas.addEventListener('pointerup', handlePointerEnd);
         canvas.addEventListener('pointercancel', handlePointerEnd);
+
+        // Robust Touch Handlers for Mobile Devices
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            initAudio();
+            setAudioState(true);
+            if (e.touches && e.touches[0]) {
+                const touch = e.touches[0];
+                state.lastRawX = touch.clientX - canvas.getBoundingClientRect().left;
+                state.lastCursorMoveTime = Date.now();
+                handlePointerMove(touch.clientX, touch.clientY);
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (e.touches && e.touches[0]) {
+                handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            handlePointerEnd();
+        }, { passive: false });
+
+        canvas.addEventListener('touchcancel', (e) => {
+            e.preventDefault();
+            handlePointerEnd();
+        }, { passive: false });
 
         function drawPianoOverlay() {
             const minMidi = Math.round(freqToMidi(state.minFreq));
@@ -776,7 +817,11 @@
         }
 
         function setupUIEventListeners() {
-            btnAudioToggle.addEventListener('click', () => setAudioState(!state.isPlaying));
+            btnAudioToggle.addEventListener('click', () => {
+                initAudio();
+                setAudioState(!state.isPlaying);
+            });
+
             btnVibratoBypass.addEventListener('click', () => {
                 state.vibratoEnabled = !state.vibratoEnabled;
                 updateVibratoUI();
