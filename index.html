@@ -32,6 +32,8 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor
 #rn{font-size:20px;font-weight:700;color:#67e8f9;min-width:42px}
 .hud small{display:block;color:var(--mu);font-size:10px}
 #fsb{position:absolute;top:8px;right:8px;width:42px;padding:0;background:rgba(2,6,23,.78);z-index:3;font-size:18px}
+#snapb{position:absolute;top:8px;right:58px;padding:0 12px;background:rgba(2,6,23,.78);z-index:3;font-weight:600;font-size:13px}
+#snapb.live{border-color:var(--am);color:var(--am)}
 #hint{position:absolute;left:0;right:0;top:44%;text-align:center;pointer-events:none;color:#cbd5e1;font-size:13px;transition:opacity .5s;text-shadow:0 1px 6px #000;background:rgba(2,6,23,.6);width:max-content;max-width:90%;margin:0 auto;padding:8px 14px;border-radius:12px}
 #bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;flex:none}
 .grp{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--mu)}
@@ -59,7 +61,7 @@ label.ck{display:flex;align-items:center;gap:8px;min-height:34px;font-size:13px}
  aside{position:static;transform:none;width:320px;max-height:none;border-radius:0;border-top:0;border-left:1px solid var(--ln);flex:none}
  header h1{font-size:17px}
 }
-@media(max-height:480px){header{padding:3px 8px}button,select{min-height:34px}#bar{display:none}.hud{top:4px;left:4px}}
+@media(max-height:480px){header{padding:3px 8px}button,select{min-height:34px}#bar{flex-wrap:nowrap;overflow-x:auto}.grp{flex:none}.seg{flex:none;min-width:200px}.hud{top:4px;left:4px}#fsb,#snapb{top:4px}}
 </style>
 </head>
 <body>
@@ -77,6 +79,7 @@ label.ck{display:flex;align-items:center;gap:8px;min-height:34px;font-size:13px}
  <div id="pad">
   <canvas id="cv"></canvas>
   <div class="hud"><div><div id="rn">--</div></div><div><span id="rf">0 Hz</span> · <span id="rv">0%</span><small id="rc">0 cents</small></div></div>
+  <button id="snapb" aria-label="Snap mode">Snap: Free</button>
   <button id="fsb" aria-label="Fullscreen">⛶</button>
   <div id="hint">Touch &amp; drag · ↔ pitch · ↕ volume</div>
  </div>
@@ -106,6 +109,7 @@ label.ck{display:flex;align-items:center;gap:8px;min-height:34px;font-size:13px}
  </div>
  <div>
   <h2>Pitch</h2>
+  <div class="seg" style="margin-bottom:8px"><button data-m="free" class="on">Free</button><button data-m="scale">Scale snap</button><button data-m="magnetic">Magnet</button></div>
   <div class="row"><span>Snap delay</span><b id="sdv">300 ms</b></div>
   <input id="sd" type="range" min="0" max="1500" step="50" value="300">
   <div class="row"><span>Magnet strength</span><b id="mgv">50%</b></div>
@@ -360,10 +364,14 @@ const openDrawer=o=>{drawer.classList.toggle('open',o);$('backdrop').style.displ
 $('gear').onclick=()=>openDrawer(true);$('close').onclick=()=>openDrawer(false);$('backdrop').onclick=()=>openDrawer(false);
 if(innerWidth>=1024)$('close').style.display='none';
 
-document.querySelectorAll('#modes button').forEach(b=>b.onclick=()=>{
- S.mode=b.dataset.m;
- document.querySelectorAll('#modes button').forEach(x=>x.classList.toggle('on',x===b));
-});
+const MODES=['free','scale','magnetic'],MN={free:'Free',scale:'Scale',magnetic:'Magnet'};
+function setMode(m){
+ S.mode=m;
+ document.querySelectorAll('.seg button[data-m]').forEach(x=>x.classList.toggle('on',x.dataset.m===m));
+ $('snapb').textContent='Snap: '+MN[m];$('snapb').classList.toggle('live',m!=='free');
+}
+document.querySelectorAll('.seg button[data-m]').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+$('snapb').onclick=()=>setMode(MODES[(MODES.indexOf(S.mode)+1)%3]);
 $('root').innerHTML=NN.map((n,i)=>`<option value="${i}"${i===9?' selected':''}>${n}</option>`).join('');
 $('root').onchange=e=>{S.root=+e.target.value;if(S.preset==='custom')renderMatrix();else applyPreset();};
 $('scale').onchange=e=>{S.preset=e.target.value;applyPreset();};
